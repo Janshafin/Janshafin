@@ -5,7 +5,8 @@ Original self-hosted SVG artworks. Motion respects reduced-motion settings.
 -->
 
 <div align="center">
-  <img src="./assets/hero-fashion.svg" alt="Jan Shafin — Onchain, off script. An animated, fashion-editorial introduction to a blockchain builder." width="100%"/>
+  <img src="./assets/hero-fashion.svg" alt="Jan Shafin — Onchain, off script. Fashion-editorial masthead." width="49%"/>
+  <img src="./assets/onchain-portrait.png" alt="Jan Shafin cyberpunk developer portrait — building onchain ideas." width="49%"/>
 </div>
 
 <br/>

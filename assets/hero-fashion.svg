@@ -1,65 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="650" viewBox="0 0 1200 650" role="img" aria-label="Jan Shafin: onchain, off script — an animated fashion editorial cover">
-<defs>
-<clipPath id="frame"><rect width="1200" height="650" rx="9"/></clipPath>
-<pattern id="grain" width="26" height="26" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r=".6" fill="#1D1B25" opacity=".14"/></pattern>
-<style>
-@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
-@keyframes swivel{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
-@keyframes roll{to{transform:rotate(360deg)}} 
-@keyframes slide{0%{transform:translateX(-55px);opacity:0}18%,100%{transform:translateX(0);opacity:1}}
-@keyframes blink{0%,88%,100%{opacity:1}91%,97%{opacity:.1}}
-@keyframes dash{to{stroke-dashoffset:-95}}
-.coat{animation:float 6.3s ease-in-out infinite}.star{transform-origin:1009px 120px;animation:roll 19s linear infinite}.badge{transform-origin:1073px 512px;animation:swivel 5s ease-in-out infinite}.name{animation:slide 1.9s ease-out both}.line{stroke-dasharray:14 16;animation:dash 5s linear infinite}.flash{animation:blink 6s ease-in-out infinite}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
-</style>
-</defs>
-<g clip-path="url(#frame)">
-<rect width="1200" height="650" fill="#F9F2E7"/>
-<rect width="1200" height="650" fill="url(#grain)"/>
-<rect x="23" y="22" width="1154" height="606" fill="none" stroke="#221F29" stroke-width="2"/>
-<rect x="36" y="35" width="1128" height="37" fill="#231E2D"/>
-<text x="52" y="59" fill="#F8F2E7" font-family="Arial,sans-serif" font-size="15" font-weight="800" letter-spacing="2.5">J/S  —  INDEPENDENT INTERNET STUDIO</text>
-<text x="902" y="59" fill="#D9F34A" font-family="Arial,sans-serif" font-size="14" font-weight="800" letter-spacing="2">ISSUE 001 / 2026</text>
-<line x1="55" y1="113" x2="1144" y2="113" stroke="#221F29" stroke-width="2"/>
-<text x="56" y="103" fill="#F44877" font-family="Arial,sans-serif" font-size="13" font-weight="800" letter-spacing="3">ENGINEER BY PRACTICE. EDITOR BY INSTINCT.</text>
-<g class="name">
-<text x="47" y="255" fill="#221F29" font-family="Arial,sans-serif" font-size="164" font-weight="900" letter-spacing="-13">JAN.</text>
-<text x="42" y="390" fill="#221F29" font-family="Arial,sans-serif" font-size="150" font-weight="900" letter-spacing="-13">SHAFIN</text>
-</g>
-<rect x="57" y="403" width="596" height="9" fill="#D9F34A"/>
-<text x="58" y="468" fill="#3D3CDE" font-family="Georgia,serif" font-size="47" font-style="italic">Onchain, off script.</text>
-<text x="59" y="513" fill="#221F29" font-family="Arial,sans-serif" font-size="21" font-weight="600">Blockchain systems, autonomous agents</text>
-<text x="59" y="541" fill="#221F29" font-family="Arial,sans-serif" font-size="21" font-weight="600">&amp; digital experiences with a point of view.</text>
-<rect x="57" y="570" width="244" height="33" rx="16" fill="#221F29"/>
-<text x="79" y="592" fill="#F9F2E7" font-family="Arial,sans-serif" font-size="13" font-weight="800" letter-spacing="1.2">SOLIDITY / REACT / AGENTS</text>
-<rect x="310" y="570" width="184" height="33" rx="16" fill="#F44877"/>
-<text x="328" y="592" fill="#221F29" font-family="Arial,sans-serif" font-size="13" font-weight="800" letter-spacing="1.1">DESIGN-LED CODE</text>
-<path d="M715 97V612" stroke="#221F29" stroke-width="1" opacity=".35"/>
-<path d="M720 520Q958 445 1160 580" fill="none" stroke="#3D3CDE" stroke-width="4" class="line"/>
-<rect x="758" y="136" width="363" height="398" rx="180" fill="#F0A5CA" stroke="#221F29" stroke-width="2"/>
-<ellipse cx="931" cy="523" rx="173" ry="22" fill="#221F29" opacity=".14"/>
-<g class="coat">
-<!-- Constructed runway figure; abstract illustration rather than a portrait -->
-<path d="M916 235C877 236 860 270 865 311L851 395Q828 418 809 490Q890 525 1047 491L1009 388L997 307Q990 249 948 237Z" fill="#D9F34A" stroke="#221F29" stroke-width="4"/>
-<path d="M909 246L867 312L912 443L927 246ZM956 246L993 314L954 443L937 246Z" fill="#BDE02A" stroke="#221F29" stroke-width="2"/>
-<path d="M929 265L934 476" stroke="#221F29" stroke-width="4"/><circle cx="937" cy="319" r="6" fill="#221F29"/><circle cx="936" cy="361" r="6" fill="#221F29"/>
-<path d="M857 318Q831 375 809 417" stroke="#221F29" stroke-width="27" stroke-linecap="round"/><path d="M1004 320Q1028 370 1062 414" stroke="#221F29" stroke-width="27" stroke-linecap="round"/>
-<path d="M859 320Q833 380 811 409" stroke="#D9F34A" stroke-width="20" stroke-linecap="round"/><path d="M1001 322Q1033 381 1061 406" stroke="#D9F34A" stroke-width="20" stroke-linecap="round"/>
-<path d="M884 493L885 558L916 558L921 494M967 495L968 558L1001 558L996 490" stroke="#221F29" stroke-width="24" stroke-linecap="round"/>
-<path d="M865 557L923 557L929 574L871 574Z" fill="#3D3CDE" stroke="#221F29" stroke-width="3"/>
-<path d="M952 557L1008 557L1018 573L957 573Z" fill="#3D3CDE" stroke="#221F29" stroke-width="3"/>
-<path d="M902 166Q910 146 938 145Q970 145 978 170L976 204Q968 231 938 235Q911 235 902 203Z" fill="#EBA97B" stroke="#221F29" stroke-width="3"/>
-<path d="M893 185Q883 123 945 124Q986 126 987 187L973 161L904 163Z" fill="#221F29"/>
-<rect x="903" y="179" width="34" height="15" rx="5" fill="#221F29"/><rect x="943" y="179" width="34" height="15" rx="5" fill="#221F29"/><rect x="935" y="183" width="10" height="4" fill="#221F29"/>
-<path d="M927 213Q939 221 950 212" stroke="#221F29" stroke-width="3" stroke-linecap="round"/>
-</g>
-<g class="star"><path d="M1009 87L1021 108L1044 112L1027 129L1031 153L1009 142L987 153L991 129L974 112L997 108Z" fill="#D9F34A" stroke="#221F29" stroke-width="2"/></g>
-<g class="badge" transform="rotate(12 1073 512)">
-<circle cx="1073" cy="512" r="63" fill="#3D3CDE" stroke="#221F29" stroke-width="3"/>
-<text x="1073" y="500" fill="#F9F2E7" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="900">NOT JUST</text>
-<text x="1073" y="517" fill="#D9F34A" text-anchor="middle" font-family="Arial,sans-serif" font-size="15" font-weight="900">ANOTHER</text>
-<text x="1073" y="534" fill="#F9F2E7" text-anchor="middle" font-family="Arial,sans-serif" font-size="13" font-weight="900">README</text>
-</g>
-<text x="751" y="594" fill="#221F29" font-family="Arial,sans-serif" font-size="14" font-weight="800" letter-spacing="1.5">LOOK 01  /  THE ONCHAIN EDITION</text>
-<text x="1145" y="616" fill="#221F29" text-anchor="end" font-family="Arial,sans-serif" font-size="13">SCROLL FOR THE COLLECTION ↓</text>
-</g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="650" viewBox="0 0 600 650" role="img" aria-label="Jan Shafin: Onchain, off script. Editorial identity typography">
+<defs><style>@keyframes dash{to{stroke-dashoffset:-100}}@keyframes pulse{50%{opacity:.4}}.dash{stroke-dasharray:12 16;animation:dash 7s linear infinite}.spark{animation:pulse 4s ease-in-out infinite}@media(prefers-reduced-motion:reduce){*{animation:none!important}}</style></defs>
+<rect width="600" height="650" fill="#F9F2E7"/><rect x="16" y="16" width="568" height="618" fill="none" stroke="#221F29" stroke-width="2"/>
+<rect x="30" y="30" width="540" height="47" fill="#221F29"/>
+<text x="46" y="59" fill="#D9F34A" font-family="Arial,sans-serif" font-weight="900" font-size="15" letter-spacing="2.1">J / S  •  THE ONCHAIN EDITION</text>
+<text x="34" y="123" fill="#F44877" font-family="Arial,sans-serif" font-weight="800" font-size="15" letter-spacing="1.1">ENGINEER BY PRACTICE.</text>
+<text x="34" y="144" fill="#F44877" font-family="Arial,sans-serif" font-weight="800" font-size="15" letter-spacing="1.1">EDITOR BY INSTINCT.</text>
+<text x="21" y="292" fill="#221F29" font-family="Arial,sans-serif" font-weight="900" font-size="139" letter-spacing="-10">JAN.</text>
+<text x="18" y="396" fill="#221F29" font-family="Arial,sans-serif" font-weight="900" font-size="104" letter-spacing="-8">SHAFIN</text>
+<rect x="31" y="417" width="519" height="9" fill="#D9F34A"/>
+<text x="32" y="486" fill="#3D3CDE" font-family="Georgia,serif" font-style="italic" font-size="43">Onchain, off script.</text>
+<text x="33" y="534" fill="#221F29" font-family="Arial,sans-serif" font-size="18" font-weight="700">BLOCKCHAIN / AUTONOMOUS AGENTS</text>
+<text x="33" y="560" fill="#221F29" font-family="Arial,sans-serif" font-size="18" font-weight="700">PRODUCT DESIGN / CREATIVE CODE</text>
+<path d="M33 589H560" stroke="#3D3CDE" stroke-width="4" class="dash"/>
+<text x="36" y="618" fill="#221F29" font-family="Arial,sans-serif" font-size="13" font-weight="800" letter-spacing="1.2">ISSUE 001 / MAKE IT INTERESTING</text>
+<circle cx="546" cy="120" r="21" fill="#D9F34A" class="spark" stroke="#221F29" stroke-width="2"/>
+</svg>

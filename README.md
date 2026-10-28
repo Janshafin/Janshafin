@@ -1,101 +1,116 @@
 <!--
-  JAN SHAFIN — THE PERSONAL INTERNET STUDIO
-  An editorial GitHub profile, designed as a lightweight illustrated portfolio.
-  All artwork is hand-authored SVG; no remote image hosts or activity widgets.
+JAN SHAFIN / THE ONCHAIN EDITION
+A deliberately art-directed GitHub profile, not a dashboard.
+Original self-hosted SVG artworks. Motion respects reduced-motion settings.
 -->
 
 <div align="center">
-  <img src="./assets/cover.svg" alt="Jan Shafin — building onchain, thinking off-grid. A colorful editorial graphic with linked geometric shapes." width="100%" />
+  <img src="./assets/hero-fashion.svg" alt="Jan Shafin — Onchain, off script. An animated, fashion-editorial introduction to a blockchain builder." width="100%"/>
 </div>
 
 <br/>
 
 <div align="center">
-  <a href="#a-little-about-me"><b>THE PERSON</b></a> &nbsp; / &nbsp;
-  <a href="#selected-work"><b>SELECTED WORK</b></a> &nbsp; / &nbsp;
-  <a href="#the-toolbox"><b>THE TOOLBOX</b></a> &nbsp; / &nbsp;
-  <a href="#say-hello"><b>SAY HELLO</b></a>
+  <a href="#the-person">THE PERSON</a> &nbsp; / &nbsp;
+  <a href="#the-collection">THE COLLECTION</a> &nbsp; / &nbsp;
+  <a href="#the-runway">THE RUNWAY</a> &nbsp; / &nbsp;
+  <a href="#the-studio">THE STUDIO</a>
 </div>
 
 <br/>
 
-### A little about me
-
-**Hey, I’m Jan.** I build at the intersection of **blockchain infrastructure, autonomous agents, and expressive digital experiences**.
-
-I like two things that don’t always meet: systems you can *verify* and interfaces you actually *want to use*. My GitHub is a collection of experiments in making that overlap real—from privacy-minded agent payments to climate verification and practical AI tools.
-
-**The working philosophy:** make it technically interesting, make it useful, and give it a point of view.
+<img src="./assets/ticker-fashion.svg" alt="Animated editorial ribbon: Code with character. Build onchain. Think like a designer." width="100%"/>
 
 <br/>
 
-### Selected work
+<a id="the-person"></a>
 
-<div align="center">
-  <img src="./assets/work-heading.svg" alt="The portfolio: work that has something to say." width="100%" />
-</div>
+### 00 / The person
+
+**Hey, I'm Jan.** I build things at the intersection of **Ethereum, autonomous agents, and product design**.
+
+I'm interested in making systems that are **technically defensible** and **visually memorable**. Smart contracts, verifiable workflows, practical AI tools — built with the attention you'd give a well-directed campaign.
+
+I don't want technology to look identical just because it uses the same stack.
 
 <br/>
+
+<img src="./assets/manifesto-fashion.svg" alt="Creative manifesto: Useful enough to ship. Interesting enough to remember." width="100%"/>
+
+<br/>
+
+<a id="the-collection"></a>
+
+### 01 / The collection
+
+*Four projects. Four different questions worth exploring. Click a look to open the repository.*
 
 <a href="https://github.com/Janshafin/TrustLine">
-  <img src="./assets/work-trustline.svg" alt="01 — TrustLine: private can-pay checks for agent-to-agent deals." width="100%" />
+  <img src="./assets/look-trustline.svg" alt="Look 01: TrustLine, an investigation into privacy-aware agent-to-agent payments." width="100%"/>
 </a>
 
-**[Explore TrustLine ↗](https://github.com/Janshafin/TrustLine)** — A hackathon prototype investigating how payment agents can check affordability without exposing a full balance. Its repo distinguishes real integrations from simulated components.
+**[LOOK 01 — TrustLine ↗](https://github.com/Janshafin/TrustLine)** · Private solvency checks for agents, designed to assess a deal without publishing the payer's full balance. *An experimental hackathon system; the repository documents which components are simulated.*
 
 <br/>
 
 <a href="https://github.com/Janshafin/Custodian">
-  <img src="./assets/work-custodian.svg" alt="02 — Custodian: multi-agent treasury controls and execution boundaries." width="100%" />
+  <img src="./assets/look-custodian.svg" alt="Look 02: Custodian, a guarded multi-agent treasury." width="100%"/>
 </a>
 
-**[Explore Custodian ↗](https://github.com/Janshafin/Custodian)** — Agent decisions meet deterministic guardrails: signals, strategy, policy checks, controlled execution, and an audit trail.
+**[LOOK 02 — Custodian ↗](https://github.com/Janshafin/Custodian)** · A multi-agent treasury experiment where probabilistic decisions meet deterministic approval rules, execution boundaries, and an auditable trail.
 
 <br/>
 
 <a href="https://github.com/Janshafin/Blue-Carbon-MRV">
-  <img src="./assets/work-blue-carbon.svg" alt="03 — Blue Carbon MRV: coastal restoration evidence, satellite signals, and an onchain registry." width="100%" />
+  <img src="./assets/look-blue-carbon.svg" alt="Look 03: Blue Carbon MRV, satellite and field evidence meets Ethereum." width="100%"/>
 </a>
 
-**[Explore Blue Carbon MRV ↗](https://github.com/Janshafin/Blue-Carbon-MRV)** — A blue-carbon measurement and verification workflow combining field evidence, satellite vegetation analysis, and an Ethereum Sepolia registry. The project supports clearly labeled simulated satellite data for demonstrations.
+**[LOOK 03 — Blue Carbon MRV ↗](https://github.com/Janshafin/Blue-Carbon-MRV)** · Field submissions, satellite vegetation analysis, and an Ethereum Sepolia registry for exploring blue-carbon verification. *Development mode can use clearly labeled simulated satellite signals.*
 
 <br/>
 
 <a href="https://github.com/Janshafin/gigforce">
-  <img src="./assets/work-gigforge.svg" alt="04 — GigForge: an AI co-founder toolkit for freelancers and solopreneurs." width="100%" />
+  <img src="./assets/look-gigforge.svg" alt="Look 04: GigForge, an AI co-founder toolkit for independent workers." width="100%"/>
 </a>
 
-**[Explore GigForge ↗](https://github.com/Janshafin/gigforce)** — An interface-led exploration of AI-assisted lead generation, proposals, and independent-work operations.
+**[LOOK 04 — GigForge ↗](https://github.com/Janshafin/gigforce)** · A product experiment for freelancers: lead discovery, proposals, and the operational work that competes with actually making things.
 
 <br/>
 
-### The toolbox
+<a id="the-runway"></a>
 
-<img src="./assets/toolbox.svg" alt="The technologies in Jan's studio: Ethereum, Solidity, TypeScript, React, Python, plus Node.js, Foundry, APIs, and automation." width="100%" />
+### 02 / The runway
 
-A toolkit, not a personality. I choose the stack around what the idea needs.
+*Not a snake. A living record of actual work, interpreted as a runway grid.*
+
+<img src="./assets/contribution-runway.svg" width="100%" alt="Animated editorial calendar based on Jan Shafin's actual public GitHub contributions. The graphic refreshes automatically."/>
+
+<sub>The squares reflect the public contribution levels GitHub publishes; the artwork is regenerated by a repository workflow. No fabricated streak counts, no external stats service.</sub>
+
+<br/><br/>
+
+<a id="the-studio"></a>
+
+### 03 / The studio
+
+<img src="./assets/studio-fashion.svg" width="100%" alt="The animated creative-engineering toolbox: Ethereum, Solidity, TypeScript, React, Python, agents, and product design."/>
+
+**Materials I keep returning to:** Solidity / Ethereum · TypeScript · React · Python · APIs · automated workflows · interface systems.
+
+I don't want every problem to become a token. I want the chain, the agent, and the interface to each earn their place.
 
 <br/>
 
-### Outside the code
+### 04 / Back cover
 
-I care about **interaction, typography, systems thinking, and the tiny details that make technology feel human**. A product should have both a clear architecture *and* a pulse.
-
-<br/>
-
-### Say hello
+<img src="./assets/closing-fashion.svg" alt="Let's make the internet interesting. Good engineering can have excellent taste." width="100%"/>
 
 <div align="center">
-  <img src="./assets/closing.svg" alt="Good ideas deserve great execution. An open invitation to collaborate." width="100%" />
-</div>
-
-<br/>
-
-<div align="center">
-  <b>Have something ambitious, unusual, or beautifully complicated in mind?</b>
-  <p>I'd love to see what you're building.</p>
-  <a href="https://github.com/Janshafin?tab=repositories">EXPLORE THE REPOS</a> &nbsp; · &nbsp;
-  <a href="https://github.com/Janshafin">FIND ME ON GITHUB</a>
+  <br/>
+  <b>Have a technically ambitious, visually unusual project in mind?</b>
   <br/><br/>
-  <sub>Designed with curiosity • built to be read, not counted</sub>
+  <a href="https://github.com/Janshafin?tab=repositories"><b>EXPLORE THE WORK ↗</b></a> &nbsp; · &nbsp;
+  <a href="https://github.com/Janshafin"><b>FIND ME ON GITHUB ↗</b></a>
+  <br/><br/>
+  <sub>THE ONCHAIN EDITION — INDEPENDENT BY DESIGN.</sub>
 </div>

@@ -1,117 +1,81 @@
 <!--
-JAN SHAFIN / THE ONCHAIN EDITION
-A deliberately art-directed GitHub profile, not a dashboard.
-Original self-hosted SVG artworks. Motion respects reduced-motion settings.
+  SPECIFICATION No. 0 — github.com/Janshafin
+
+  Every plate in this file is generated, never drawn by hand:
+    python3 scripts/build_plates.py           title, invariants 1–4, closing
+    python3 scripts/render_contributions.py   Appendix A (also runs daily in CI)
+  Each plate ships in a light and a dark version and follows the viewer's GitHub theme.
 -->
 
-<div align="center">
-  <img src="./assets/hero-fashion.svg" alt="Jan Shafin — Onchain, off script. Fashion-editorial masthead." width="49%"/>
-  <img src="./assets/ethereum-blockchain-motion.svg" alt="Original Ethereum and blockchain animation with a floating ETH crystal, connected blocks and glowing transaction paths." width="49%"/>
-</div>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/title-dark.svg">
+  <img src="./assets/title-light.svg" width="100%" alt="Jan Shafin — the collected invariants. Smart contracts, autonomous agents, and the invariants that keep them honest. Below the name, Ethereum's state transition σ(t+1) ≡ Υ(σ(t), T), and under it Inv(σ(t)) ⇒ Inv(σ(t+1)), circled in red pencil: the only line that matters.">
+</picture>
 
-<br/>
+**Abstract.** I build on Ethereum and with autonomous agents, mostly in Solidity, TypeScript and Python, and mostly against a hackathon clock. The work I keep returning to sits on one boundary: the point where something probabilistic (a language model, a market, a satellite reading) is allowed to touch something final (a transfer, a trade, a registry entry). Each plate below reduces one system to the single property it is built never to break, says plainly what is live and what is still simulated, and links to the code.
 
-<div align="center">
-  <a href="#the-person">THE PERSON</a> &nbsp; / &nbsp;
-  <a href="#the-collection">THE COLLECTION</a> &nbsp; / &nbsp;
-  <a href="#the-runway">THE RUNWAY</a> &nbsp; / &nbsp;
-  <a href="#the-studio">THE STUDIO</a>
-</div>
+<br>
 
-<br/>
+<a href="https://github.com/Janshafin/flasharb">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/invariant-1-dark.svg">
+  <img src="./assets/invariant-1-light.svg" width="100%" alt="Invariant 1 of 4, flasharb: the sum of all deltas equals zero. Every delta inside one unlock nets to zero, or the trade never happened. Diagram: PoolManager.unlock runs four steps (swap on v4, SwapVM, take and push, settle) and ends in ΣΔ = 0, else revert.">
+</picture>
+</a>
 
-<img src="./assets/ticker-fashion.svg" alt="Animated editorial ribbon: Code with character. Build onchain. Think like a designer." width="100%"/>
+**[flasharb ↗](https://github.com/Janshafin/flasharb)** · Atomic flash arbitrage between Uniswap v4 and 1inch Aqua, built at ETHGlobal Mumbai 2026. It borrows through v4 flash accounting, trades against an Aqua strategy priced by SwapVM, and keeps the spread inside a single `PoolManager.unlock`. Includes a searcher bot and a live dashboard; a Huff executor is in progress and matches the Solidity reference in 33 differential tests so far.
 
-<br/>
-
-<a id="the-person"></a>
-
-### 00 / The person
-
-**Hey, I'm Jan.** I build things at the intersection of **Ethereum, autonomous agents, and product design**.
-
-I'm interested in making systems that are **technically defensible** and **visually memorable**. Smart contracts, verifiable workflows, practical AI tools — built with the attention you'd give a well-directed campaign.
-
-I don't want technology to look identical just because it uses the same stack.
-
-<br/>
-
-<img src="./assets/manifesto-fashion.svg" alt="Creative manifesto: Useful enough to ship. Interesting enough to remember." width="100%"/>
-
-<br/>
-
-<a id="the-collection"></a>
-
-### 01 / The collection
-
-*Four projects. Four different questions worth exploring. Click a look to open the repository.*
+<br>
 
 <a href="https://github.com/Janshafin/TrustLine">
-  <img src="./assets/look-trustline.svg" alt="Look 01: TrustLine, an investigation into privacy-aware agent-to-agent payments." width="100%"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/invariant-2-dark.svg">
+  <img src="./assets/invariant-2-light.svg" width="100%" alt="Invariant 2 of 4, TrustLine: the enclave's output is either SETTLE or INSUFFICIENT. An agent shows it can cover a deal without anyone seeing what it holds. Diagram: inside the enclave, the balance is redacted; only SETTLE or INSUFFICIENT comes out.">
+</picture>
 </a>
 
-**[LOOK 01 — TrustLine ↗](https://github.com/Janshafin/TrustLine)** · Private solvency checks for agents, designed to assess a deal without publishing the payer's full balance. *An experimental hackathon system; the repository documents which components are simulated.*
+**[TrustLine ↗](https://github.com/Janshafin/TrustLine)** · A private solvency check for agent-to-agent payments, built for ETHOnline 2026. A Chainlink CRE confidential workflow compares balance and price inside an enclave and publishes one bit; a Privy policy wallet pays only on `SETTLE`. *CRE runs in local simulation; live DON deployment is invite-only.*
 
-<br/>
+<br>
 
 <a href="https://github.com/Janshafin/Custodian">
-  <img src="./assets/look-custodian.svg" alt="Look 02: Custodian, a guarded multi-agent treasury." width="100%"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/invariant-3-dark.svg">
+  <img src="./assets/invariant-3-light.svg" width="100%" alt="Invariant 3 of 4, Custodian: execute(i) implies policy(i) = APPROVED. Language models may propose anything; only rules move money, and they fail closed. Diagram: Signal and Strategist agents are probabilistic; Policy, Execution and Audit are deterministic.">
+</picture>
 </a>
 
-**[LOOK 02 — Custodian ↗](https://github.com/Janshafin/Custodian)** · A multi-agent treasury experiment where probabilistic decisions meet deterministic approval rules, execution boundaries, and an auditable trail.
+**[Custodian ↗](https://github.com/Janshafin/Custodian)** · A five-agent treasury for the DoraHacks Agent Economy hackathon. Signal and strategy agents propose; a fail-closed rules engine (caps, allowlists, cooldowns, velocity) decides; only the execution agent holds KeeperHub credentials; every stage lands in an HMAC-signed, append-only ledger. *The policy gate and audit ledger are live; the LLM side is still being wired in.*
 
-<br/>
+<br>
 
 <a href="https://github.com/Janshafin/Blue-Carbon-MRV">
-  <img src="./assets/look-blue-carbon.svg" alt="Look 03: Blue Carbon MRV, satellite and field evidence meets Ethereum." width="100%"/>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/invariant-4-dark.svg">
+  <img src="./assets/invariant-4-light.svg" width="100%" alt="Invariant 4 of 4, Blue Carbon MRV: record(c) implies score(c) ≥ 75 and flags(c) = 0. Mangrove restoration claims reach the chain only with satellite evidence behind them. Diagram: photo and EXIF, GPS and date, and Sentinel-2 NDVI feed a score; only a passing score is written to a registry on Sepolia.">
+</picture>
 </a>
 
-**[LOOK 03 — Blue Carbon MRV ↗](https://github.com/Janshafin/Blue-Carbon-MRV)** · Field submissions, satellite vegetation analysis, and an Ethereum Sepolia registry for exploring blue-carbon verification. *Development mode can use clearly labeled simulated satellite signals.*
+**[Blue Carbon MRV ↗](https://github.com/Janshafin/Blue-Carbon-MRV)** · Measurement, reporting and verification for mangrove restoration: field photos with EXIF and GPS, Sentinel-2 NDVI change analysis, and a `BlueCarbonCredit` registry on Ethereum Sepolia. *Development mode can substitute clearly labelled mock NDVI.*
 
-<br/>
+<br>
 
-<a href="https://github.com/Janshafin/gigforce">
-  <img src="./assets/look-gigforge.svg" alt="Look 04: GigForge, an AI co-founder toolkit for independent workers." width="100%"/>
+**Also on the desk.** [ADGENT](https://github.com/Janshafin/ADGENT): ads that run inside AI shopping agents over MCP, where merchants pay only when a PayPal sale settles (PayPal AI Hackathon 2026). [GigForge](https://github.com/Janshafin/gigforce): an AI co-founder toolkit for freelancers, from lead discovery to proposals.
+
+**Materials.** Solidity, Foundry, Huff · Uniswap v4, 1inch Aqua & SwapVM, Chainlink CRE, Privy, KeeperHub · TypeScript, React, Node · Python, FastAPI, Web3.py · MCP and LLM agents.
+
+<br>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/appendix-a-dark.svg">
+  <img src="./assets/appendix-a-light.svg" width="100%" alt="Appendix A: Jan Shafin's public GitHub activity for the last year, drawn as an engraved grid where denser hatching means more contributions. Regenerated daily from GitHub's public contribution calendar.">
+</picture>
+
+<a href="https://github.com/Janshafin?tab=repositories">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/closing-dark.svg">
+  <img src="./assets/closing-light.svg" width="100%" alt="End of specification. Counterexamples welcome. Found a case where one of these breaks? Open an issue on the repository.">
+</picture>
 </a>
 
-**[LOOK 04 — GigForge ↗](https://github.com/Janshafin/gigforce)** · A product experiment for freelancers: lead discovery, proposals, and the operational work that competes with actually making things.
-
-<br/>
-
-<a id="the-runway"></a>
-
-### 02 / The runway
-
-*Not a snake. A living record of actual work, interpreted as a runway grid.*
-
-<img src="./assets/contribution-runway.svg" width="100%" alt="Animated editorial calendar based on Jan Shafin's actual public GitHub contributions. The graphic refreshes automatically."/>
-
-<sub>The squares reflect the public contribution levels GitHub publishes; the artwork is regenerated by a repository workflow. No fabricated streak counts, no external stats service.</sub>
-
-<br/><br/>
-
-<a id="the-studio"></a>
-
-### 03 / The studio
-
-<img src="./assets/studio-fashion.svg" width="100%" alt="The animated creative-engineering toolbox: Ethereum, Solidity, TypeScript, React, Python, agents, and product design."/>
-
-**Materials I keep returning to:** Solidity / Ethereum · TypeScript · React · Python · APIs · automated workflows · interface systems.
-
-I don't want every problem to become a token. I want the chain, the agent, and the interface to each earn their place.
-
-<br/>
-
-### 04 / Back cover
-
-<img src="./assets/closing-fashion.svg" alt="Let's make the internet interesting. Good engineering can have excellent taste." width="100%"/>
-
-<div align="center">
-  <br/>
-  <b>Have a technically ambitious, visually unusual project in mind?</b>
-  <br/><br/>
-  <a href="https://github.com/Janshafin?tab=repositories"><b>EXPLORE THE WORK ↗</b></a> &nbsp; · &nbsp;
-  <a href="https://github.com/Janshafin"><b>FIND ME ON GITHUB ↗</b></a>
-  <br/><br/>
-  <sub>THE ONCHAIN EDITION — INDEPENDENT BY DESIGN.</sub>
-</div>
+<sub>Set in STIX Two and JetBrains Mono (SIL Open Font License), shaped with HarfBuzz and drawn as outlines so the type survives GitHub's image proxy. Every plate is generated by the scripts in this repository; Appendix A redraws itself daily from GitHub's public calendar. Motion pauses for readers who prefer reduced motion.</sub>

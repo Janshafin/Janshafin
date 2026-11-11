@@ -1,11 +1,11 @@
-name: Editorial contribution runway
+name: Proof of work
 
 on:
   push:
     branches: [main]
     paths:
-      - "scripts/render_contributions.py"
-      - ".github/workflows/editorial-contributions.yml"
+      - "scripts/**"
+      - ".github/workflows/proof-of-work.yml"
   schedule:
     - cron: "21 3 * * *"
   workflow_dispatch:
@@ -14,7 +14,7 @@ permissions:
   contents: write
 
 concurrency:
-  group: editorial-contribution-art
+  group: proof-of-work
   cancel-in-progress: false
 
 jobs:
@@ -25,15 +25,15 @@ jobs:
       - name: Check out the profile
         uses: actions/checkout@v4
 
-      - name: Render actual GitHub contribution activity
+      - name: Redraw from the public contribution calendar
         run: python3 scripts/render_contributions.py
 
-      - name: Commit the refreshed artwork
+      - name: Commit the redrawn graph
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add assets/contribution-runway.svg
+          git add assets/proof-of-work.svg
           if ! git diff --cached --quiet; then
-            git commit -m "art: refresh the contribution runway"
+            git commit -m "art: redraw proof of work"
             git push
           fi

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Profile studio stage</title>
+<link rel="stylesheet" href="./tokens.css">
+<script type="importmap">
+{ "imports": {
+    "three": "/node_modules/three/build/three.module.js",
+    "three/addons/": "/node_modules/three/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="card" class="card"><canvas id="gl"></canvas><div id="ui" class="ui"></div></div>
+<script type="module">
+  // The renderer drives this page: window.__frame(i) draws frame i of the loop.
+  const params = new URLSearchParams(location.search);
+  const name = params.get("scene");
+  const mod = await import(`./scenes/${name}.js`);
+  const spec = mod.default;
+  const card = document.getElementById("card");
+  card.style.width = spec.w + "px";
+  card.style.height = spec.h + "px";
+  card.classList.add(...(spec.classes || []));
+  document.getElementById("ui").innerHTML = spec.html;
+  await document.fonts.ready;
+  const data = params.get("data") ? await (await fetch(params.get("data"))).json() : null;
+  const scene = spec.setup
+    ? await spec.setup({ canvas: document.getElementById("gl"), w: spec.w, h: spec.h,
+                         dpr: Number(params.get("dpr") || 2), data, ui: document.getElementById("ui") })
+    : null;
+  window.__spec = { w: spec.w, h: spec.h, frames: spec.frames || 1, fps: spec.fps || 20 };
+  window.__frame = (i) => { if (scene) scene.frame(i / (spec.frames || 1)); return true; };
+  window.__ready = true;
+</script>
+</body>
+</html>

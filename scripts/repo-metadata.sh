@@ -34,9 +34,9 @@ describe gigforce \
   "GigForge: an AI co-founder toolkit for freelancers, from lead discovery to proposals." \
   ai-agents freelancing typescript
 
-gh repo edit "$U/$U" --description "Profile README, typeset as a specification."
+gh repo edit "$U/$U" --description "Profile README: real-time Three.js scenes rendered to animated WebP."
 
-gh api -X PATCH /user -f bio="Ethereum and agent systems, built around the invariants that keep them honest."
+gh api -X PATCH /user -f bio="I build Ethereum systems where autonomous agents can act — and can't cheat."
 
 # Pinned repositories cannot be set through the API. On the profile page choose
 # "Customize your pins": flasharb, TrustLine, Custodian, Blue-Carbon-MRV, ADGENT, gigforce.

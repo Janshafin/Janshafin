@@ -17,9 +17,7 @@ const contact = [
 export default {
   w: W, h: H, frames: 1, page: "#E882B4",
   under: `
-    <div style="position:absolute;left:700px;bottom:22px;width:240px;height:30px;border-radius:50%;
-      background:radial-gradient(closest-side,rgba(0,0,0,.3),rgba(0,0,0,0))"></div>
-    <img id="me" src="/models/jan.webp" style="position:absolute;left:738px;bottom:30px;height:600px">`,
+`,
   html: `
     <div style="position:absolute;left:40px;top:40px;width:700px">
       <div class="caps" style="font-size:12px">Off the chain</div>
@@ -41,7 +39,6 @@ export default {
     <div class="spray" style="position:absolute;left:520px;top:400px;font-size:46px;transform:rotate(-8deg)">Don’t trust,<br>verify</div>
     <div class="pill caps" style="position:absolute;right:28px;bottom:30px;font-size:13px">All repositories <span class="dot">↗</span></div>`,
   async setup(ctx) {
-    await ctx.under.querySelector("#me").decode();
     return { frame() {} };
   },
 };

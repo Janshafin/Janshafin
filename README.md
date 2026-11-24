@@ -33,7 +33,7 @@
 </a>
 
 <a href="https://janshafin.github.io/My_Portfolio/">
-  <img src="./assets/closing.png" width="100%" alt="Code is half the outfit. A photo of Jan in a green leather jacket, white shirt, black tie and wide denim. Let's build something verifiable. Email janshafin09@gmail.com, phone +91 63690 56143, portfolio janshafin.github.io/My_Portfolio, based in Chennai, India. Size chart: Onchain, Ethereum, Solidity, Foundry, Uniswap v4, Chainlink CRE, Huff. Product, TypeScript, React, Node.js, Vite, Python, FastAPI. Agents, Claude, MCP, x402, GitHub Actions.">
+  <img src="./assets/closing.png" width="100%" alt="Code is half the outfit. Let's build something verifiable. Email janshafin09@gmail.com, phone +91 63690 56143, portfolio janshafin.github.io/My_Portfolio, based in Chennai, India. Size chart: Onchain, Ethereum, Solidity, Foundry, Uniswap v4, Chainlink CRE, Huff. Product, TypeScript, React, Node.js, Vite, Python, FastAPI. Agents, Claude, MCP, x402, GitHub Actions.">
 </a>
 
 <p align="center">

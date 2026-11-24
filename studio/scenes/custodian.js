@@ -1,86 +1,131 @@
-import { THREE, glass, chrome, glow, edges, TAU, LIME, AMBER, toScreen, ease } from "./common.js";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
-import { W, H, panelHTML, panelRig } from "./panel.js";
+// Custodian: five gimbal rings, one per agent. They tumble on their own axes and only come into
+// one plane when the policy agrees; then, and only then, light passes through the centre.
+import { shaderPlate } from "./gl.js";
+import { W, H, panelHTML } from "./panel.js";
 
 const P = {
-  index: "03", kind: "AI agents · Treasury", name: "Custodian", seed: 53, event: "DoraHacks Agent Economy",
-  blurb: "A five-agent treasury. Language models propose; a fail-closed rules engine (caps, allowlists, cooldowns, velocity) decides; only the execution agent holds KeeperHub credentials; every stage lands in an HMAC-signed ledger.",
-  invariant: "execute(i) ⇒ policy(i) = APPROVED",
-  stack: ["TypeScript", "KeeperHub", "json-rules-engine", "Sepolia"],
-  status: "Policy + audit live · 19 tests",
+  name: "Custodian", event: "DoraHacks Agent Economy, 2026", scrim: "rgba(12,9,8,.82)",
+  blurb: "A treasury run by five agents. Language models propose; a fail-closed rules engine of caps, allowlists, cooldowns and velocity limits decides. Only the execution agent holds keys, and every step lands in a signed ledger.",
+  facts: [
+    ["Guarantee", "Nothing executes unless the policy gate approved it first."],
+    ["Built with", "TypeScript, KeeperHub, json-rules-engine, Sepolia"],
+    ["Status", "Policy gate and audit ledger live, 19 tests"],
+  ],
 };
-const LAYERS = ["Signal", "Strategist", "Policy", "Execution", "Audit"];
+
+const FRAG = /* glsl */ `
+const vec3 C = vec3(2.45, 1.15, 0.);
+const vec3 KEY = normalize(vec3(-.5, .8, .45));
+const vec3 EMB = vec3(1., .55, .25);
+const float FIRE = .93;   // the moment of agreement
+
+float spin(){ return ease((uT - .06) / .74); }
+float beamK(){ float d = abs(fract(uT - FIRE + .5) - .5); return exp(-d * d / .0035); }
+
+float ringD(vec3 p, float R){
+  vec2 q = vec2(length(p.xz) - R, p.y);
+  return length(max(abs(q) - vec2(.045, .1) + .03, 0.)) - .03;
+}
+vec3 ringLocal(vec3 p, int i){
+  vec3 q = p - C;
+  q.yz *= rot(.62); q.xy *= rot(-.18);
+  float fi = float(i);
+  float a = TAU * (fi < 2. ? fi + 1. : (fi == 2. ? -1. : fi - 1.)) * spin();
+  if(i % 2 == 0) q.yz *= rot(a); else q.xy *= rot(a);
+  return q;
+}
+float radius(int i){ return 2.05 - float(i) * .34; }
+
+vec2 map(vec3 p){
+  vec2 r = vec2(1e9, -1.);
+  for(int i = 0; i < 5; i++) r = opU(r, vec2(ringD(ringLocal(p, i), radius(i)), 10. + float(i)));
+  // the treasury itself: a small dark sphere at the centre
+  r = opU(r, vec2(length(p - C) - .2, 5.));
+  r = opU(r, vec2(p.y + 1.35, 2.));
+  return r;
+}
+@POST
+
+vec3 env(vec3 rd){
+  vec3 c = mix(vec3(.02, .014, .012), vec3(.07, .05, .045), smoothstep(-.2, .7, rd.y));
+  c += vec3(2.4, 2.1, 1.8) * smoothstep(.1, 0., abs(rd.x + .1) - .45) * smoothstep(.7, .86, rd.y);
+  c += vec3(2.2, 1.2, .55) * smoothstep(.06, 0., abs(rd.x - .85) - .04) * smoothstep(0., .3, .55 - abs(rd.y - .1));
+  c += vec3(.8, .85, 1.1) * smoothstep(.06, 0., abs(rd.x + .9) - .05) * smoothstep(0., .3, .5 - abs(rd.y - .2));
+  c += vec3(.6, .35, .2) * .22 * exp(-abs(rd.y) * 8.);
+  return c;
+}
+
+vec3 floorCol(vec3 p){
+  float sh = softShadow(p + vec3(0, .01, 0), KEY, 9.);
+  float ao = calcAO(p, vec3(0, 1, 0));
+  vec3 c = vec3(.04, .03, .026) * (.3 + .7 * sh) * ao;
+  float b = beamK();
+  c += EMB * 1.6 * b * exp(-length(p.xz - C.xz) * 1.6);
+  c += vec3(.12, .08, .06) * exp(-length(p.xz - C.xz) * .4) * sh;
+  return c;
+}
+
+vec3 metal(vec3 p, vec3 n, vec3 rd, float id){
+  int i = int(id - 10.);
+  vec3 q = ringLocal(p, i);
+  float ao = calcAO(p, n);
+  // brushed: streaks follow the ring, so the normal gets a little circumferential noise
+  float ang = atan(q.z, q.x);
+  float br = noise(vec3(ang * 90., q.y * 40., float(i) * 7.));
+  vec3 nb = normalize(n + (br - .5) * .08 * normalize(vec3(-q.z, 0, q.x)));
+  vec3 ref = reflect(rd, nb);
+  float fre = pow(1. - max(dot(nb, -rd), 0.), 5.);
+  vec3 tint = i == 2 ? vec3(1., .78, .52) : vec3(.92, .9, .88);
+  vec3 c = env(ref) * tint * (.65 + .35 * fre) * (.35 + .65 * ao);
+  c += tint * max(dot(nb, KEY), 0.) * .12 * softShadow(p + n * .01, KEY, 10.);
+  // the inner face of each ring lights when they agree
+  float inner = smoothstep(.0, -.04, length(q.xz) - radius(i)) * smoothstep(.06, .0, abs(q.y));
+  c += EMB * inner * (beamK() * 6. + .15);
+  return c;
+}
+
+vec3 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 40.);
+  vec3 col;
+  if(h.y < 0.) col = env(rd) * .3;
+  else {
+    vec3 p = ro + rd * h.x;
+    vec3 n = calcNormal(p);
+    if(h.y >= 10.) col = metal(p, n, rd, h.y);
+    else if(h.y == 5.) col = env(reflect(rd, n)) * .5 * vec3(.5, .45, .4) + EMB * beamK() * 3.;
+    else {
+      col = floorCol(p);
+      vec3 rr = reflect(rd, n);
+      vec2 hr = march(p + n * .01, rr, 10.);
+      if(hr.y >= 10.){ vec3 q = p + rr * hr.x; col += metal(q, calcNormal(q), rr, hr.y) * .14; }
+    }
+    col = mix(col, vec3(.03, .02, .018), 1. - exp(-max(h.x - 9., 0.) * .12));
+  }
+  // the beam: a column of light through the centre, perpendicular to the agreed plane
+  vec3 ax = vec3(0, 1, 0); ax.yz *= rot(-.62); ax.xy *= rot(.18);
+  vec3 w = ro - C;
+  vec3 c1 = cross(rd, ax);
+  float dl = abs(dot(w, c1)) / max(length(c1), 1e-4);
+  float b = beamK();
+  float along = dot(ro + rd * dot(C - ro, rd) - C, ax);
+  col += EMB * b * (exp(-dl * 40.) * 1.6 + exp(-dl * 6.) * .25) * smoothstep(3.2, .4, abs(along));
+  return col;
+}
+
+void main(){
+  vec3 ro = vec3(0., 2.2, 9.8), ta = vec3(.6, .75, 0.);
+  vec3 col = vec3(0);
+  for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
+    vec2 o = vec2(i, j) / 2. - .25;
+    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
+    col += render(ro, camRay(ro, ta, uv, 1.85));
+  }
+  outColor = vec4(finish(col / 4., gl_FragCoord.xy), 1.);
+}
+`;
 
 export default {
-  w: W, h: H, frames: 96, fps: 24,
+  w: W, h: H, frames: 120, fps: 24,
   html: panelHTML(P),
-
-  async setup(ctx) {
-    const r = panelRig(ctx, P, [[0.74, 0.5, 0.14, "#c8ff5a", 0.26], [0.84, 0.36, 0.1, "#ffb547", 0.2]]);
-    const { scene, camera, render } = r;
-    const g = new THREE.Group();
-    g.position.set(r.x + 0.35, -0.12, 0);
-    g.rotation.set(0.42, -0.62, 0);
-    scene.add(g);
-
-    const slabGeo = new RoundedBoxGeometry(2.3, 0.14, 1.7, 4, 0.05);
-    const GAP = 0.62, top = 1.25;
-    const slabs = LAYERS.map((name, i) => {
-      let mat;
-      if (i < 2) mat = glass({ roughness: 0.25, thickness: 0.3, iridescence: 0.8, flatShading: false, opacity: 0.9 });
-      else if (i === 2) mat = chrome({ color: 0x23272d, roughness: 0.3, emissive: LIME, emissiveIntensity: 0.1 });
-      else mat = chrome({ color: 0x9aa1ac, roughness: 0.24 });
-      const m = new THREE.Mesh(slabGeo, mat);
-      m.position.y = top - i * GAP;
-      edges(m, i === 2 ? LIME : 0xffffff, i === 2 ? 0.9 : i < 2 ? 0.5 : 0.22);
-      g.add(m);
-      return m;
-    });
-
-    // proposals fall from the models; the gate decides
-    const amber = new THREE.Mesh(new THREE.SphereGeometry(0.1, 20, 14), glow(AMBER, 3.5));
-    const lime = new THREE.Mesh(new THREE.SphereGeometry(0.1, 20, 14), glow(LIME, 4));
-    g.add(amber, lime);
-    const yTop = top + 0.45, yGate = top - 2 * GAP + 0.17, yEnd = top - 4 * GAP - 0.5;
-
-    // labels left of the stack
-    const labels = LAYERS.map((name, i) => {
-      const v = new THREE.Vector3(-1.25, slabs[i].position.y, 0.85).applyMatrix4(g.matrixWorld.compose(g.position, g.quaternion, g.scale));
-      const [x, y] = toScreen(camera, v, W, H);
-      const el = document.createElement("div");
-      el.className = "label";
-      el.style.cssText = `position:absolute;left:${x - 22}px;top:${y - 8}px;transform:translateX(-100%);font-size:11px;white-space:nowrap`;
-      el.innerHTML = `${name}${i < 2 ? ' <span class="dim">· model</span>' : i === 2 ? ' <span class="lime">· gate</span>' : ""}`;
-      ctx.ui.appendChild(el);
-      return el;
-    });
-
-    return {
-      frame(t) {
-        // the two model layers drift; the deterministic layers never move
-        for (let i = 0; i < 2; i++) {
-          slabs[i].rotation.z = 0.05 * Math.sin(TAU * t + i * 1.7);
-          slabs[i].rotation.x = 0.04 * Math.cos(TAU * t * 2 + i);
-          slabs[i].position.x = 0.06 * Math.sin(TAU * t + i * 2.1);
-        }
-        // 0.0-0.5: a proposal hits the gate and is refused; 0.5-1.0: an approved one passes through
-        const a = t < 0.5 ? t / 0.5 : 1;
-        amber.visible = t < 0.5;
-        amber.position.y = THREE.MathUtils.lerp(yTop, yGate, ease(Math.min(1, a / 0.6)));
-        amber.material.opacity = 1;
-        amber.scale.setScalar(a > 0.6 ? Math.max(0.01, 1 - (a - 0.6) / 0.4) : 1);
-        const b = t >= 0.5 ? (t - 0.5) / 0.5 : 0;
-        lime.visible = t >= 0.5;
-        lime.position.y = THREE.MathUtils.lerp(yTop, yEnd, ease(b));
-        lime.scale.setScalar(b > 0.85 ? Math.max(0.01, (1 - b) / 0.15) : 1);
-        const gate = slabs[2].material;
-        const refuse = t < 0.5 && a > 0.55 && a < 0.85;
-        gate.emissive.set(refuse ? AMBER : LIME);
-        gate.emissiveIntensity = refuse ? 0.55 : t >= 0.5 && Math.abs(lime.position.y - yGate) < 0.25 ? 0.6 : 0.1;
-        labels[2].style.color = refuse ? "var(--amber)" : "";
-        r.drift(t);
-        render();
-      },
-    };
-  },
+  async setup(ctx) { return shaderPlate({ ...ctx, frag: FRAG }); },
 };

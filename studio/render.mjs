@@ -12,14 +12,15 @@ import puppeteer from "puppeteer-core";
 import sharp from "sharp";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
-const OUT = resolve(ROOT, "../assets");
-const ALL = ["hero", "flasharb", "trustline", "custodian", "bluecarbon", "toolchain", "activity", "closing"];
-const STILLS = new Set(["toolchain", "closing"]);
+const OUT = resolve(process.env.OUT || resolve(ROOT, "../assets"));
+const ALL = ["hero", "flasharb", "trustline", "custodian", "bluecarbon", "activity", "closing"];
+const STILLS = new Set(["closing"]);
 const DPR = Number(process.env.DPR || 1.5);
 
 const args = process.argv.slice(2);
 const quick = args.includes("--quick");
 const forceStill = args.includes("--still");
+const at = Number((args.find((a) => a.startsWith("--at=")) || "--at=0").slice(5));
 const names = args.filter((a) => !a.startsWith("--"));
 const scenes = names.length ? names : ALL;
 
@@ -40,7 +41,7 @@ const chromePath = process.env.CHROME_PATH || [
 ].find(existsSync);
 const browser = await puppeteer.launch({
   executablePath: chromePath, headless: true,
-  args: ["--enable-webgl", "--ignore-gpu-blocklist", "--enable-unsafe-swiftshader", "--use-angle=" + (process.platform === "darwin" ? "metal" : "swiftshader")],
+  args: ["--enable-webgl", "--ignore-gpu-blocklist", "--enable-unsafe-swiftshader", "--use-angle=" + (process.env.ANGLE || (process.platform === "darwin" ? "metal" : "swiftshader"))],
 });
 
 async function contributions() {
@@ -66,7 +67,8 @@ try {
     page.on("console", (m) => m.type() === "error" && console.error(`[${name}] ${m.text()}`));
     const data = name === "activity" ? "&data=/data/contributions.json" : "";
     await page.setViewport({ width: 1400, height: 1000, deviceScaleFactor: DPR });
-    await page.goto(`${base}/stage.html?scene=${name}&dpr=${DPR}${data}`);
+    const aa = process.env.AA ? `&aa=${process.env.AA}` : "";
+    await page.goto(`${base}/stage.html?scene=${name}&dpr=${DPR}${data}${aa}`);
     await page.waitForFunction("window.__ready === true", { timeout: 60000 });
     const spec = await page.evaluate(() => window.__spec);
     await page.setViewport({ width: spec.w, height: spec.h, deviceScaleFactor: DPR });
@@ -74,7 +76,7 @@ try {
 
     const still = forceStill || STILLS.has(name) || spec.frames === 1;
     const step = quick ? 8 : 1;
-    const indices = still ? [0] : Array.from({ length: Math.ceil(spec.frames / step) }, (_, k) => k * step);
+    const indices = still ? [Math.round(at * spec.frames) % spec.frames] : Array.from({ length: Math.ceil(spec.frames / step) }, (_, k) => k * step);
     const raws = [];
     let W = 0, H = 0;
     const t0 = Date.now();

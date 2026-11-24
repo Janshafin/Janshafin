@@ -1,51 +1,33 @@
-/* Design tokens: graphite, glass, one signal colour. */
+/* Dusk palette: the scenes are lit like a low sun over still water.
+   Type: Newsreader for display, Geist for reading. No caps labels, no chips. */
 @font-face { font-family: "Geist"; font-weight: 100 900; font-display: block;
   src: url("/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Geist Mono"; font-weight: 100 900; font-display: block;
-  src: url("/node_modules/@fontsource-variable/geist-mono/files/geist-mono-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Instrument Serif"; font-style: italic; font-weight: 400; font-display: block;
-  src: url("/node_modules/@fontsource/instrument-serif/files/instrument-serif-latin-400-italic.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-weight: 200 800; font-display: block;
+  src: url("/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 200 800; font-display: block;
+  src: url("/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2") format("woff2"); }
 
 :root {
-  --bg: #0A0B0D;
-  --raise: rgba(255, 255, 255, .035);
-  --line: rgba(255, 255, 255, .09);
-  --line-2: rgba(255, 255, 255, .16);
-  --text: #F3F4F6;
-  --muted: #9AA0A9;
-  --dim: #626873;
-  --lime: #C8FF5A;
-  --amber: #FFB547;
-  --cyan: #6BE7FF;
+  --pearl: #F1ECF6;   /* text */
+  --haze: #B9B0CC;    /* secondary text */
+  --dusk: #7D7496;    /* tertiary */
+  --ember: #FFB089;   /* the moment a block finalizes */
+  --ether: #9EA4FF;   /* Ethereum's own blue-violet, used sparingly */
+  --ink: #17132B;     /* scene base */
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: transparent; }
-body { -webkit-font-smoothing: antialiased; font-family: "Geist", system-ui, sans-serif; color: var(--text); }
+body { -webkit-font-smoothing: antialiased; font-family: "Geist", system-ui, sans-serif; color: var(--pearl);
+  font-feature-settings: "ss01", "tnum"; }
 
-.card { position: relative; overflow: hidden; border-radius: 28px; background: var(--bg); }
+.card { position: relative; overflow: hidden; border-radius: 22px; background: var(--ink); }
 .card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  box-shadow: inset 0 0 0 1px var(--line), inset 0 1px 0 0 rgba(255,255,255,.07); }
+  box-shadow: inset 0 0 0 1px rgba(241, 236, 246, .08); }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .ui { position: absolute; inset: 0; }
 
-/* type */
-.mono { font-family: "Geist Mono", ui-monospace, monospace; letter-spacing: .02em; }
-.label { font-family: "Geist Mono", monospace; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.serif { font-family: "Instrument Serif", serif; font-style: italic; font-weight: 400; letter-spacing: -.01em; }
-.dim { color: var(--dim); } .muted { color: var(--muted); } .lime { color: var(--lime); }
-
-/* parts */
-.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--lime);
-  box-shadow: 0 0 0 4px rgba(200, 255, 90, .14), 0 0 16px rgba(200, 255, 90, .6); vertical-align: middle; }
-.dot.amber { background: var(--amber); box-shadow: 0 0 0 4px rgba(255, 181, 71, .14), 0 0 16px rgba(255, 181, 71, .5); }
-.chip { display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; border-radius: 8px;
-  background: var(--raise); box-shadow: inset 0 0 0 1px var(--line); font: 500 13px/1 "Geist Mono", monospace;
-  color: #C9CDD3; letter-spacing: .01em; }
-.chips { display: flex; flex-wrap: wrap; gap: 8px; }
-.btn { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 18px; border-radius: 12px;
-  background: var(--text); color: #0A0B0D; font: 600 15px/1 "Geist", sans-serif; letter-spacing: -.01em; }
-.btn.ghost { background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
-.mark { display: inline-grid; place-items: center; width: 36px; height: 36px; border-radius: 10px;
-  background: var(--text); color: #0A0B0D; font: 700 14px/1 "Geist", sans-serif; letter-spacing: -.04em; }
-.scrim-left { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,11,13,.92) 0%, rgba(10,11,13,.7) 38%, rgba(10,11,13,0) 62%); }
-.scrim-right { position: absolute; inset: 0; background: linear-gradient(270deg, rgba(10,11,13,.92) 0%, rgba(10,11,13,.7) 38%, rgba(10,11,13,0) 62%); }
+.display { font-family: "Newsreader", serif; font-weight: 300; letter-spacing: -.035em; line-height: .9;
+  font-variation-settings: "opsz" 72; }
+.lede { font: 400 20px/1.45 "Geist"; letter-spacing: -.012em; color: var(--haze); }
+.small { font: 450 14px/1.5 "Geist"; letter-spacing: -.005em; color: var(--dusk); }
+.pearl { color: var(--pearl); }

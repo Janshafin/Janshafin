@@ -1,97 +1,162 @@
-import { THREE, rig, backdrop, glass, chrome, edges, dust, floor, ethCrystal, TAU, LIME } from "./common.js";
-import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+// Hero: a chain as architecture. Ceramic blocks stack into a slow twisting tower that sinks
+// into still water at dusk; each loop a new block drops onto the top and its seam lights as it finalizes.
+import { shaderPlate } from "./gl.js";
+
+export const FRAG = /* glsl */ `
+const float H = .34;      // block pitch
+const float TW = .31;     // twist per block
+const float TOP = 9.;     // the incoming block; the resting stack is every level below it
+const float LAND = .46;   // when it lands
+const vec3 TOWER = vec3(2.05, 0., -.4);
+const vec3 SUN = normalize(vec3(-.7, .3, .32));     // key: low, from the left
+const vec3 GLOW = normalize(vec3(.5, .07, -.86));   // where the sun has just set
+
+float fallOffset(float s){
+  float x = clamp(s / LAND, 0., 1.);
+  float d = 5.2 * (1. - x) * (1. - x);
+  // a small settle after contact
+  float a = max(s - LAND, 0.);
+  return d + .035 * sin(a * 40.) * exp(-a * 18.);
+}
+float levelY(float i, float s){ return (i - s) * H + (i == TOP ? fallOffset(s) : 0.); }
+float levelR(float i, float s){
+  float spin = i == TOP ? 1.4 * pow(1. - clamp(s / LAND, 0., 1.), 2.) : 0.;
+  return (i - s) * TW + spin;
+}
+vec3 local(vec3 p, float i){
+  float s = uT;
+  vec3 q = p - TOWER;
+  q.y -= levelY(i, s);
+  q.xz *= rot(levelR(i, s));
+  return q;
+}
+float slab(vec3 q){ return sdRBox(q, vec3(1.08, .135, .66), .028); }
+
+vec2 map(vec3 p){
+  float s = uT;
+  vec3 q0 = p - TOWER;
+  float c0 = floor(q0.y / H + s + .5);
+  float d = 1e9, id = -1.;
+  for(int k = -1; k <= 1; k++){
+    float i = min(c0 + float(k), TOP - 1.);
+    if(i < -2.) continue;
+    float e = slab(local(p, i));
+    if(e < d){ d = e; id = 20. + i; }
+  }
+  float f = slab(local(p, TOP));
+  if(f < d){ d = f; id = 20. + TOP; }
+  vec2 r = vec2(d, id);
+  // distant chains in the haze
+  r = opU(r, vec2(p.y, 2.));
+  return r;
+}
+@POST
+
+vec3 sky(vec3 rd){
+  float y = rd.y;
+  vec3 top = vec3(.025, .022, .07), mid = vec3(.14, .1, .26), hor = vec3(.8, .42, .34);
+  vec3 c = mix(hor, mid, smoothstep(-.02, .22, y));
+  c = mix(c, top, smoothstep(.16, .75, y));
+  float sd = max(dot(rd, GLOW), 0.);
+  c += vec3(1., .42, .22) * pow(sd, 10.) * .38 + vec3(1., .6, .4) * pow(sd, 60.) * .6;
+  // a faint band of high cloud
+  float cl = fbm(vec3(rd.x * 3. / (y + .25), rd.y * 18., 1.3));
+  c += vec3(1., .6, .5) * smoothstep(.55, .8, cl) * .12 * smoothstep(.0, .06, y) * (1. - smoothstep(.1, .3, y));
+  return c;
+}
+
+float glowAge(float i){ return uT + (TOP - i) - LAND; }
+
+vec3 shadeSolid(vec3 p, vec3 n, vec3 rd, float id){
+  float ao = calcAO(p, n);
+  vec3 ref = reflect(rd, n);
+  float fre = pow(1. - max(dot(n, -rd), 0.), 5.);
+  float sh = softShadow(p + n * .01, SUN, 12.);
+  float dif = max(dot(n, SUN), 0.) * sh;
+  float fill = max(dot(n, normalize(vec3(-.7, .45, .6))), 0.);
+  float up = .5 + .5 * n.y;
+  float down = max(-n.y, 0.);
+  vec3 col;
+  if(id >= 10.){
+    float i = id - 20.;
+    vec3 q = local(p, i);
+    vec3 alb = vec3(.84, .8, .88);
+    float back = max(dot(n, GLOW), 0.);
+    col = alb * (dif * vec3(2.5, 1.5, 1.0) + up * vec3(.16, .13, .3) * ao + back * vec3(.9, .42, .3) * ao
+                 + down * vec3(.3, .15, .14) * ao);
+    col += (.04 + .5 * fre) * sky(ref) * ao * mix(.4, 1., sh);
+    // the seam: a hairline groove around each block, with a hash written along it
+    float side = 1. - abs(n.y);
+    float seam = smoothstep(.016, .006, abs(q.y)) * side;
+    float cell = floor(q.x * 22.) + floor(q.z * 22.) * 7. + i * 31.;
+    float bits = step(.45, hash12(vec2(cell, i))) * smoothstep(.05, .02, abs(q.y + .055)) * side;
+    float age = glowAge(i);
+    float hot = age >= 0. ? exp(-age * 2.4) : 0.;
+    vec3 ember = vec3(1., .5, .26);
+    col *= 1. - seam * .55;
+    col += seam * (ember * 5. * hot + vec3(.45, .48, 1.) * .5);
+    col = mix(col, col * .55 + ember * 3. * hot, bits * .35);
+  } else if(id == 3.){
+    col = vec3(.12, .09, .2) + vec3(.5, .3, .25) * max(dot(n, SUN), 0.) * .4;
+  } else {
+    col = vec3(.03, .025, .06);
+  }
+  return col;
+}
+
+vec3 fogged(vec3 col, vec3 rd, float t){
+  vec3 fc = mix(vec3(.62, .34, .32), vec3(.16, .11, .27), smoothstep(-.1, .25, rd.y));
+  fc += vec3(1., .5, .3) * pow(max(dot(rd, GLOW), 0.), 8.) * .3;
+  return mix(col, fc, 1. - exp(-t * .024));
+}
+
+vec3 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 90.);
+  if(h.y < 0.) return sky(rd);
+  vec3 p = ro + rd * h.x;
+  if(h.y == 2.){
+    // still water: rings spread from where the tower meets it
+    vec2 d = p.xz - TOWER.xz;
+    float r = length(d);
+    float w = sin(r * 13. - TAU * uT * 3.) * exp(-r * .45) * .5 + (noise(vec3(p.xz * 3.5, 0.)) - .5) * .25;
+    vec3 n = normalize(vec3(d / max(r, .001) * w * .06, 1.).xzy);
+    vec3 rr = reflect(rd, n);
+    vec2 hr = march(p + n * .01, rr, 60.);
+    vec3 rc = hr.y < 0. ? sky(rr) : fogged(shadeSolid(p + rr * hr.x, calcNormal(p + rr * hr.x), rr, hr.y), rr, hr.x);
+    float fre = .06 + .94 * pow(1. - max(dot(n, -rd), 0.), 5.);
+    float sh = softShadow(p + vec3(0, .01, 0), SUN, 10.);
+    vec3 base = vec3(.035, .028, .07) * (.4 + .6 * sh);
+    vec3 col = mix(base, rc * .85, clamp(fre * 1.35, 0., 1.));
+    return fogged(col, rd, h.x);
+  }
+  return fogged(shadeSolid(p, calcNormal(p), rd, h.y), rd, h.x);
+}
+
+void main(){
+  vec3 ro = vec3(-.2, 1.15, 8.6), ta = vec3(.7, 1.95, 0.);
+  vec3 col = vec3(0);
+  for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
+    vec2 o = vec2(i, j) / 2. - .25;
+    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
+    col += render(ro, camRay(ro, ta, uv, 1.65));
+  }
+  col /= 4.;
+  outColor = vec4(finish(col, gl_FragCoord.xy), 1.);
+}
+`;
 
 export default {
-  w: 1200, h: 640, frames: 96, fps: 24,
+  w: 1200, h: 640, frames: 120, fps: 24,
   html: `
-  <div class="scrim-left"></div>
-  <div style="position:absolute;inset:0;padding:48px 60px;display:flex;flex-direction:column">
-    <div style="display:flex;align-items:center;gap:14px">
-      <span class="mark">JS</span>
-      <span class="label" style="color:var(--text);letter-spacing:.12em">Jan Shafin</span>
-      <span class="label" style="margin-left:auto">github.com/Janshafin</span>
-    </div>
-    <div style="margin-top:96px" class="label"><span class="dot"></span>&nbsp;&nbsp;Onchain systems · AI agents</div>
-    <h1 style="margin-top:22px;font:600 112px/0.92 Geist;letter-spacing:-.055em">Jan Shafin</h1>
-    <p style="margin-top:26px;max-width:540px;font:400 25px/1.32 Geist;letter-spacing:-.015em;color:var(--muted)">
-      I build Ethereum systems where autonomous agents can act&nbsp;—
-      <span class="serif" style="color:var(--text);font-size:31px">and can’t cheat.</span></p>
-    <div class="chips" style="margin-top:30px">
-      <span class="chip">Solidity</span><span class="chip">TypeScript</span><span class="chip">Python</span>
-      <span class="chip">Foundry</span><span class="chip">Uniswap v4</span>
-    </div>
-    <div class="label" style="margin-top:auto;font-size:12px;color:var(--dim)">
-      Four hackathon builds in 2026 &nbsp;/&nbsp; ETHGlobal Mumbai · ETHOnline · DoraHacks · PayPal AI
-    </div>
-  </div>`,
+  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,11,28,.55) 0%,rgba(14,11,28,.2) 34%,rgba(14,11,28,0) 52%)"></div>
+  <div style="position:absolute;left:64px;bottom:58px;width:560px">
+    <h1 class="display" style="font-size:118px">Jan Shafin</h1>
+    <p class="lede" style="margin-top:26px;max-width:470px;font-size:22px">
+      I build Ethereum systems where autonomous agents can act, and can’t cheat.</p>
+  </div>
+`,
 
   async setup(ctx) {
-    const { scene, camera, render } = rig({ ...ctx, cam: [0, 0.35, 10.5], bloom: { strength: 0.45, radius: 0.5, threshold: 0.92 } });
-    backdrop(scene, [[0.7, 0.42, 0.13, "#c8ff5a", 0.32], [0.78, 0.6, 0.12, "#6be7ff", 0.3],
-                     [0.64, 0.62, 0.09, "#ff8a3d", 0.18]]);
-    floor(scene, -2.75, 0.06);
-    const drift = dust(scene, 220, [12, 6, 6], 11);
-
-    const hero = new THREE.Group();
-    hero.position.set(2.7, -0.05, 0);
-    scene.add(hero);
-
-    const crystal = ethCrystal();
-    crystal.position.y = 0.05;
-    hero.add(crystal);
-
-    // Orbit: a chrome ring with eight glass blocks chained along it.
-    const tilt = new THREE.Group();
-    tilt.rotation.set(1.18, 0, -0.32);
-    hero.add(tilt);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(2.1, 0.012, 16, 240), chrome({ roughness: 0.35, color: 0x9aa0a9 }));
-    tilt.add(ring);
-    const ring2 = new THREE.Mesh(new THREE.TorusGeometry(2.45, 0.005, 8, 240),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.12 }));
-    tilt.add(ring2);
-
-    const N = 8, R = 2.1, HEAD = -1.75;
-    const blockGeo = new RoundedBoxGeometry(0.34, 0.34, 0.34, 3, 0.05);
-    const blocks = [];
-    for (let i = 0; i < N; i++) {
-      const b = new THREE.Mesh(blockGeo, glass({ thickness: 0.4, flatShading: false, iridescence: 0.6, emissive: LIME, emissiveIntensity: 0 }));
-      edges(b, 0xffffff, 0.25);
-      tilt.add(b);
-      blocks.push(b);
-    }
-    const linkGeo = new THREE.BufferGeometry().setFromPoints(Array.from({ length: N + 1 }, () => new THREE.Vector3()));
-    const links = new THREE.Line(linkGeo, new THREE.LineBasicMaterial({ color: LIME, transparent: true, opacity: 0.35 }));
-    tilt.add(links);
-
-    const key = new THREE.DirectionalLight(0xffffff, 0.5);
-    key.position.set(-3, 5, 6);
-    scene.add(key);
-    const rim = new THREE.PointLight(0x6be7ff, 30, 12);
-    rim.position.set(5.5, 1.5, -1);
-    scene.add(rim);
-    const warm = new THREE.PointLight(0xc8ff5a, 18, 10);
-    warm.position.set(0.5, -1.5, 3);
-    scene.add(warm);
-
-    return {
-      frame(t) {
-        crystal.rotation.y = (TAU / 4) * t + 0.35;          // four-fold symmetry: a quarter turn loops
-        crystal.position.y = 0.05 + Math.sin(TAU * t) * 0.09;
-        const pts = linkGeo.attributes.position;
-        for (let i = 0; i < N; i++) {
-          const a = (TAU / N) * (i + t) + 0.6;                // one block-length per loop
-          blocks[i].position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
-          blocks[i].rotation.set(a * 0.5, a, 0);
-          // a block "confirms" as it passes the front of the orbit
-          const d = Math.atan2(Math.sin(a - HEAD), Math.cos(a - HEAD));
-          blocks[i].material.emissiveIntensity = 2.4 * Math.exp(-(d * d) / 0.12);
-          pts.setXYZ(i, Math.cos(a) * R, Math.sin(a) * R, 0);
-        }
-        pts.setXYZ(N, pts.getX(0), pts.getY(0), 0);
-        pts.needsUpdate = true;
-        drift(t);
-        render();
-      },
-    };
+    return shaderPlate({ ...ctx, frag: FRAG });
   },
 };

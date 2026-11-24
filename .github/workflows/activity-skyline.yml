@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "studio/scenes/activity.js"
-      - "studio/scenes/common.js"
+      - "studio/scenes/gl.js"
       - "studio/render.mjs"
       - ".github/workflows/activity-skyline.yml"
   schedule:
@@ -22,7 +22,7 @@ concurrency:
 jobs:
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +40,7 @@ jobs:
         working-directory: studio
         env:
           CHROME_PATH: /usr/bin/google-chrome
+          AA: "1"
         run: node render.mjs activity
 
       - name: Commit the refreshed skyline

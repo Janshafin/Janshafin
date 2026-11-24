@@ -1,100 +1,144 @@
-import { THREE, chrome, glow, edges, TAU, LIME, CYAN, toScreen } from "./common.js";
-import { W, H, panelHTML, panelRig } from "./panel.js";
+// Blue Carbon MRV: a core cut from a mangrove coast. The canopy and shallow water sit on top; the
+// side shows the dark peat where blue carbon is actually stored. A survey line sweeps the canopy
+// and every tile it passes is marked verified.
+import { shaderPlate } from "./gl.js";
+import { W, H, panelHTML } from "./panel.js";
 
 const P = {
-  index: "04", kind: "Climate · Registry", name: "Blue Carbon MRV", seed: 71, flip: true, event: "Mangrove restoration",
-  blurb: "Measurement, reporting and verification for mangrove restoration: geotagged field photos, Sentinel-2 NDVI change analysis and EXIF consistency checks, then a <span class='mono' style='color:var(--text)'>BlueCarbonCredit</span> record on Ethereum Sepolia.",
-  invariant: "record(c) ⇒ score ≥ 75 ∧ flags = 0",
-  stack: ["Python", "FastAPI", "Web3.py", "React", "Sentinel-2"],
-  status: "Dev mode can mock NDVI", statusTone: "amber",
+  name: "Blue Carbon", event: "Mangrove restoration registry", flip: true, scrim: "rgba(4,12,18,.84)",
+  blurb: "Measurement, reporting and verification for mangrove restoration. Geotagged field photos, Sentinel-2 NDVI change analysis and EXIF checks feed a credit record on Ethereum Sepolia.",
+  facts: [
+    ["Guarantee", "A credit is recorded only with a score of 75 or more and zero flags."],
+    ["Built with", "Python, FastAPI, Web3.py, React, Sentinel-2"],
+    ["Status", "Development mode can stand in mock NDVI"],
+  ],
 };
 
-export default {
-  w: W, h: H, frames: 96, fps: 24,
-  html: panelHTML(P),
+const FRAG = /* glsl */ `
+const vec3 C = vec3(-2.3, .95, 0.);
+const float R = 1.75, HH = .5;
+const vec3 SUN = normalize(vec3(-.75, .32, -.5));
 
-  async setup(ctx) {
-    const r = panelRig(ctx, P, [[0.72, 0.5, 0.15, "#6be7ff", 0.3], [0.8, 0.36, 0.1, "#c8ff5a", 0.22]]);
-    const { scene, camera, render } = r;
-    const g = new THREE.Group();
-    g.position.set(r.x + 0.1, 0.05, 0);
-    g.rotation.z = 0.32;
-    scene.add(g);
+vec3 toLocal(vec3 p){ vec3 q = p - C; q.xz *= rot(.5 + .22 * sin(TAU * uT)); return q; }
+float canopyMask(vec2 x){ return smoothstep(.46, .66, fbm(vec3(x * .95, 2.1)) + .12 * (1. - length(x) / R)); }
+float canopyH(vec2 x){
+  float m = canopyMask(x);
+  return m * (.07 + .07 * fbm(vec3(x * 7., 4.)) + .03 * noise(vec3(x * 24., 1.)));
+}
 
-    // a low-poly earth, turned so a vertex sits on the spin axis: a 72° turn maps it onto itself
-    const geo = new THREE.IcosahedronGeometry(1.45, 2);
-    const axis = new THREE.Vector3(0, 1, (1 + Math.sqrt(5)) / 2).normalize();
-    geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(axis, new THREE.Vector3(0, 1, 0)));
-    const spin = new THREE.Group();
-    g.add(spin);
-    const earth = new THREE.Mesh(geo, new THREE.MeshPhysicalMaterial({
-      color: 0x0b2426, roughness: 0.42, metalness: 0.5, flatShading: true, clearcoat: 0.8, iridescence: 0.5 }));
-    edges(earth, CYAN, 0.12);
-    spin.add(earth);
-    const atmo = new THREE.Mesh(new THREE.SphereGeometry(1.62, 48, 32), new THREE.MeshBasicMaterial({
-      color: CYAN, transparent: true, opacity: 0.025, blending: THREE.AdditiveBlending, depthWrite: false }));
-    g.add(atmo);
+vec2 map(vec3 p){
+  vec3 q = toLocal(p);
+  float cyl = sdCyl(q, R, HH);
+  float top = q.y - HH - canopyH(q.xz);
+  float d = max(length(q.xz) - R, top * .6);
+  d = max(d, -q.y - HH);
+  d = min(d, cyl);
+  vec2 r = vec2(d, 1.);
+  r = opU(r, vec2(p.y, 2.));
+  return r;
+}
+@POST
 
-    // restoration sites: five symmetric clusters of glowing mangroves
-    const tree = new THREE.IcosahedronGeometry(0.032, 1);
-    let s = 9; const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-    const local = Array.from({ length: 7 }, () => [0.25 + rnd() * 0.5, rnd() * 0.5 - 0.25]);
-    for (let k = 0; k < 5; k++) {
-      for (const [lat, dlon] of local) {
-        const lon = (k / 5) * TAU + dlon;
-        const n = new THREE.Vector3(Math.cos(lat) * Math.cos(lon), Math.sin(lat - 0.6), Math.cos(lat) * Math.sin(lon)).normalize();
-        const m = new THREE.Mesh(tree, glow(LIME, 1.6));
-        m.position.copy(n.clone().multiplyScalar(1.42));
-        m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), n);
-        spin.add(m);
-      }
+vec3 sky(vec3 rd){
+  vec3 c = mix(vec3(.12, .2, .26), vec3(.02, .05, .1), smoothstep(-.05, .6, rd.y));
+  c += vec3(.9, .45, .3) * pow(max(dot(rd, SUN), 0.), 6.) * .35;
+  return c;
+}
+
+float scanX(){ return mix(-R - .2, R + .2, ease(uT / .7)); }
+float tileLit(vec2 x){
+  vec2 cell = floor(x * 4.) + .5;
+  float passed = step(cell.x / 4., scanX());
+  float fadeOut = 1. - smoothstep(.82, .98, uT);
+  return passed * fadeOut * step(.5, canopyMask(cell / 4.));
+}
+
+vec3 shade(vec3 p, vec3 n, vec3 rd){
+  vec3 q = toLocal(p);
+  float ao = calcAO(p, n);
+  float sh = softShadow(p + n * .01, SUN, 10.);
+  float dif = max(dot(n, SUN), 0.) * sh;
+  vec3 sunC = vec3(2.2, 1.3, .85), skyC = vec3(.18, .32, .42);
+  float onTop = step(HH - .005, q.y) * step(.6, n.y + .5);
+  vec3 col;
+  if(q.y > HH - .01 && length(q.xz) < R - .01){
+    float m = canopyMask(q.xz);
+    float hgt = canopyH(q.xz);
+    if(m > .05 && hgt > .02){
+      // canopy: dense, dark green with warm tips
+      vec3 alb = mix(vec3(.02, .07, .035), vec3(.09, .2, .07), fbm(vec3(q.xz * 9., 3.)));
+      alb = mix(alb, vec3(.25, .3, .1), smoothstep(.22, .32, hgt) * .5);
+      col = alb * (dif * sunC + (.5 + .5 * n.y) * skyC * ao) * ao;
+      // translucency toward the sun
+      col += vec3(.2, .3, .05) * pow(max(dot(rd, SUN), 0.), 3.) * .3;
+    } else {
+      // shallow water over mud
+      vec3 nw = normalize(n + .025 * vec3(sin(q.x * 22. + TAU * uT * 2.), 0, cos(q.z * 19. - TAU * uT * 2.)));
+      float fre = .02 + .98 * pow(1. - max(dot(nw, -rd), 0.), 5.);
+      vec3 deep = vec3(.03, .17, .2) * (.5 + .5 * sh);
+      col = mix(deep, sky(reflect(rd, nw)) * 1.3, fre);
+      col += sunC * pow(max(dot(reflect(rd, nw), SUN), 0.), 120.) * sh * .8;
     }
+    // the survey line, and the tiles it has verified
+    float dx = q.x - scanX();
+    col += vec3(.5, 1., .95) * exp(-dx * dx * 5000.) * 1.6 + vec3(.3, .8, .9) * exp(-dx * dx * 120.) * .12 * (1. - smoothstep(.7, .78, uT));
+    vec2 g = abs(fract(q.xz * 4.) - .5);
+    float grid = smoothstep(.47, .5, max(g.x, g.y));
+    col += vec3(1., .62, .35) * grid * tileLit(q.xz) * .7;
+    col += vec3(1., .62, .35) * .05 * tileLit(q.xz);
+  } else if(q.y < -HH + .005){
+    col = vec3(.01);
+  } else {
+    // the cut face: water line, living roots, then layer on layer of dark peat and clay
+    float y = q.y + .06 * fbm(vec3(atan(q.z, q.x) * 3., q.y * 2., 1.));
+    vec3 peat = vec3(.035, .025, .02), clay = vec3(.16, .15, .15), silt = vec3(.3, .26, .2);
+    float b = fract(y * 3.6 + .55 * fbm(vec3(q.xz * 2.2, y * 6.)));
+    vec3 alb = mix(peat, clay, smoothstep(.55, .75, b) * smoothstep(.45, .1, q.y));
+    alb = mix(alb, silt, smoothstep(-.25, -.45, y) * .7);
+    alb = mix(alb, vec3(.06, .1, .06), smoothstep(.36, .46, y));   // roots near the surface
+    alb *= .8 + .4 * noise(vec3(q * 40.));
+    col = alb * (dif * sunC + skyC * ao * .9 + .05);
+    // a carbon reading written into the peat as a faint vertical gauge
+    col += vec3(.95, .6, .35) * smoothstep(.006, .0, abs(fract(atan(q.z, q.x) * 8. / TAU) - .5) - .002) * smoothstep(.0, -.4, q.y) * .06;
+  }
+  // a hairline rim where the core was cut
+  col += vec3(.6, .8, .85) * smoothstep(.012, .0, abs(q.y - HH)) * smoothstep(R - .03, R, length(q.xz)) * .4;
+  return col;
+}
 
-    // a satellite on a tilted orbit, with a scan cone to the ground
-    const orbit = new THREE.Group();
-    orbit.rotation.set(1.1, 0, -0.5);
-    g.add(orbit);
-    orbit.add(new THREE.Mesh(new THREE.TorusGeometry(2.25, 0.006, 8, 200),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.22 })));
-    const sat = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.26, 0.4), chrome({ roughness: 0.2 }));
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.014, 0.26),
-      new THREE.MeshPhysicalMaterial({ color: 0x1b2c55, metalness: 0.6, roughness: 0.25, iridescence: 1 }));
-    const w1 = wing.clone(); w1.position.x = 0.56; const w2 = wing.clone(); w2.position.x = -0.56;
-    sat.add(body, w1, w2);
-    orbit.add(sat);
-    const beam = new THREE.Mesh(new THREE.ConeGeometry(0.42, 1, 32, 1, true).translate(0, -0.5, 0),
-      new THREE.MeshBasicMaterial({ color: CYAN, transparent: true, opacity: 0.1, side: THREE.DoubleSide,
-        blending: THREE.AdditiveBlending, depthWrite: false }));
-    orbit.add(beam);
+vec3 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 40.);
+  if(h.y < 0.) return vec3(.03, .07, .09);
+  vec3 p = ro + rd * h.x;
+  vec3 n = calcNormal(p);
+  vec3 col;
+  if(h.y == 1.) col = shade(p, n, rd);
+  else {
+    float sh = softShadow(p + vec3(0, .01, 0), SUN, 8.);
+    float ao = calcAO(p, n);
+    col = vec3(.02, .045, .06) * (.35 + .65 * sh) * ao;
+    vec3 rr = reflect(rd, n);
+    vec2 hr = march(p + n * .01, rr, 10.);
+    if(hr.y == 1.){ vec3 q = p + rr * hr.x; col += shade(q, calcNormal(q), rr) * .2; }
+    else col += sky(rr) * .06;
+  }
+  return mix(col, vec3(.03, .07, .09), 1. - exp(-max(h.x - 7., 0.) * .25));
+}
 
-    const [lx, ly] = toScreen(camera, new THREE.Vector3(g.position.x, -2.0, 0), W, H);
-    const tag = document.createElement("div");
-    tag.style.cssText = `position:absolute;left:${lx}px;top:${ly}px;transform:translateX(-50%);display:flex;gap:8px;white-space:nowrap`;
-    tag.innerHTML = `<span class="chip" style="height:26px;font-size:11px">photo + EXIF</span>
-      <span class="chip" style="height:26px;font-size:11px">Sentinel-2 NDVI</span>
-      <span class="chip" id="rec" style="height:26px;font-size:11px">→ record</span>`;
-    ctx.ui.appendChild(tag);
-    const rec = document.getElementById("rec");
+void main(){
+  vec3 ro = vec3(.4, 3.6, 9.2), ta = vec3(-.7, .7, 0.);
+  vec3 col = vec3(0);
+  for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
+    vec2 o = vec2(i, j) / 2. - .25;
+    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
+    col += render(ro, camRay(ro, ta, uv, 1.9));
+  }
+  outColor = vec4(finish(col / 4., gl_FragCoord.xy), 1.);
+}
+`;
 
-    return {
-      frame(t) {
-        spin.rotation.y = (TAU / 5) * t;
-        const a = TAU * t;
-        const R = 2.25;
-        sat.position.set(Math.cos(a) * R, Math.sin(a) * R, 0);
-        sat.lookAt(orbit.localToWorld(new THREE.Vector3(0, 0, 0)));
-        // the scan cone points from the satellite to the planet's centre
-        beam.position.copy(sat.position);
-        beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), sat.position.clone().negate().normalize());
-        beam.scale.set(1, R - 1.45, 1);
-        const front = Math.sin(a) < -0.2;                      // scanning the visible face
-        beam.material.opacity = front ? 0.14 : 0.05;
-        rec.style.background = front ? "var(--lime)" : "";
-        rec.style.color = front ? "#0A0B0D" : "";
-        r.drift(t);
-        render();
-      },
-    };
-  },
+export default {
+  w: W, h: H, frames: 120, fps: 24,
+  html: panelHTML(P),
+  async setup(ctx) { return shaderPlate({ ...ctx, frag: FRAG }); },
 };

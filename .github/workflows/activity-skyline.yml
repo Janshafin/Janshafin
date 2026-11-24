@@ -6,6 +6,7 @@ on:
     paths:
       - "studio/scenes/activity.js"
       - "studio/scenes/gl.js"
+      - "studio/scenes/type3d.js"
       - "studio/stage.html"
       - "studio/tokens.css"
       - "studio/render.mjs"

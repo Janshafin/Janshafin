@@ -14,9 +14,9 @@ import sharp from "sharp";
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(process.env.OUT || resolve(ROOT, "../assets"));
 const ALL = ["hero", "flasharb", "trustline", "custodian", "bluecarbon", "capsule", "activity", "closing"];
-const REPOS = ["flasharb", "TrustLine", "Custodian", "Blue-Carbon-MRV", "ADGENT", "gigforce"];
-const STILLS = new Set(["closing"]);
-const DPR = Number(process.env.DPR || 1.5);
+const REPOS = ["Janshafin", "flasharb", "TrustLine", "Custodian", "Blue-Carbon-MRV", "ADGENT", "gigforce"];
+const STILLS = new Set([]);
+const DPR = Number(process.env.DPR || 1.25);   // 1500px wide: sharp at GitHub's 896px column on retina
 
 const args = process.argv.slice(2);
 const quick = args.includes("--quick");
@@ -59,14 +59,16 @@ async function contributions() {
 await mkdir(join(ROOT, "data"), { recursive: true });
 try {
   // the latest real commit of each featured repo, printed as the barcode on its hangtag
-  if (scenes.some((s) => s !== "activity")) {
-    const repos = {};
+  if (!process.env.NOFETCH && scenes.some((s) => s !== "activity")) {
+    // start from the last good hashes, so a rate-limited API never loses a seed
+    let repos = {};
+    try { repos = JSON.parse(await readFile(join(ROOT, "data/repos.json"), "utf8")); } catch {}
     for (const r of REPOS) {
       try {
         const res = await fetch(`https://api.github.com/repos/Janshafin/${r}/commits?per_page=1`,
           { headers: { "user-agent": "profile-studio/1.0", accept: "application/vnd.github+json" } });
-        const [c] = await res.json();
-        repos[r] = { sha: c.sha, date: c.commit.committer.date };
+        const body = await res.json();
+        if (Array.isArray(body) && body[0]) repos[r] = { sha: body[0].sha, date: body[0].commit.committer.date };
       } catch { /* keep going without a barcode */ }
     }
     await writeFile(join(ROOT, "data/repos.json"), JSON.stringify(repos));

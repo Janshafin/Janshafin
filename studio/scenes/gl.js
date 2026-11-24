@@ -174,17 +174,28 @@ export function shaderPlate({ canvas, w, h, dpr, frag, vec = [0, 0, 0, 0], textu
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, texture.w, texture.h, 0, gl.RED, gl.UNSIGNED_BYTE, texture.pixels);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // float textures (glyph distance fields) filter linearly; byte textures (data) stay exact
+    if (texture.float) gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, texture.w, texture.h, 0, gl.RED, gl.FLOAT, texture.pixels);
+    else gl.texImage2D(gl.TEXTURE_2D, 0, gl.R8, texture.w, texture.h, 0, gl.RED, gl.UNSIGNED_BYTE, texture.pixels);
+    const filt = texture.float ? gl.LINEAR : gl.NEAREST;
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, filt);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filt);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     gl.uniform1i(U("uTex"), 0);
   }
   const uT = U("uT");
   const uPage = U("uPage");
+  const locs = {};
   return {
     setPage(hex) { gl.uniform3f(uPage, ...hex3(hex)); },
+    // set a uniform by name: numbers -> float, arrays -> vecN or vecN[] by `size`
+    set(name, v, size = 1) {
+      const l = locs[name] ?? (locs[name] = U(name));
+      if (typeof v === "number") return gl.uniform1f(l, v);
+      if (size === 1) return gl.uniform1fv(l, v);
+      return gl[`uniform${size}fv`](l, v);
+    },
     frame(t) {
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT);

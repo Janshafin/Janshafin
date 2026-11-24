@@ -8,6 +8,7 @@ precision highp float;
 uniform vec2 uRes;
 uniform float uT;
 uniform vec4 uData;
+uniform vec3 uPage;   // the plate's page colour, sRGB
 uniform sampler2D uTex;
 out vec4 outColor;
 #define TAU 6.28318530718
@@ -75,10 +76,56 @@ float calcAO(vec3 p, vec3 n){
   for(int i = 0; i < 5; i++){ float h = .02 + .11 * float(i); o += (h - map(p + n * h).x) * s; s *= .8; }
   return clamp(1. - 1.6 * o, 0., 1.);
 }
+
+// ---- the toy studio: a sweep lit in the page colour, softboxes for the gloss ----
+vec3 pageLin(){ return pow(uPage, vec3(2.2)); }
+const vec3 KEYL = normalize(vec3(-.55, .85, .55));
+// glossy designer-toy vinyl. alb is linear colour; gloss 0..1
+vec3 vinyl(vec3 p, vec3 n, vec3 rd, vec3 alb, float gloss){
+  float ao = calcAO(p, n);
+  float sh = softShadow(p + n * .01, KEYL, 10.);
+  float wrap = clamp((dot(n, KEYL) + .3) / 1.3, 0., 1.);
+  vec3 c = alb * (wrap * mix(.35, 1., sh) * 1.05 + .32 * ao * (.65 + .35 * n.y));
+  c += alb * pageLin() * .45 * clamp(.5 - .5 * n.y, 0., 1.) * ao;          // bounce off the sweep
+  vec3 r = reflect(rd, n);
+  float fre = .04 + .96 * pow(1. - max(dot(n, -rd), 0.), 5.);
+  float box = smoothstep(.8, .96, dot(r, KEYL));
+  float strip = smoothstep(.975, .995, dot(r, normalize(vec3(.85, .25, .45))));
+  c += (box * 1.25 * mix(.2, 1., sh) + strip * .8) * gloss * (.3 + .7 * fre);
+  c += fre * pageLin() * .5 * ao * gloss;                                     // the studio, reflected
+  return c;
+}
+// polished metal in the same studio
+vec3 chromeIn(vec3 p, vec3 n, vec3 rd, vec3 tint){
+  float ao = calcAO(p, n);
+  vec3 r = reflect(rd, n);
+  // product-shot studio: dark flags all round, the page colour on the floor, hard white softboxes
+  vec3 env = vec3(.012);
+  env += pageLin() * .55 * smoothstep(.05, -.25, r.y);
+  env += vec3(3.2) * smoothstep(.82, .93, dot(r, KEYL));
+  env += vec3(2.2) * smoothstep(.06, .0, abs(r.x - .55) - .08) * smoothstep(-.1, .3, r.y) * step(0., r.z);
+  env += vec3(1.4) * smoothstep(.04, .0, abs(r.x + .8) - .05) * smoothstep(.0, .2, .6 - abs(r.y - .2));
+  env += pageLin() * .35 * smoothstep(.0, .2, r.y) * smoothstep(.4, .0, abs(r.z + .7));
+  return env * tint * (.4 + .6 * ao);
+}
+// how much the sweep is darkened at a floor point: 0 = page colour, 1 = deep shadow
+float floorShade(vec3 p){
+  float sh = softShadow(p + vec3(0, .01, 0), KEYL, 7.);
+  float ao = calcAO(p, vec3(0, 1, 0));
+  return clamp((1. - sh) * .42 + (1. - ao) * .75, 0., 1.);
+}
 `;
 
 // Shared finishing: tone map, vignette, grain. The grain is keyed to the frame so it loops.
 const FINISH = /* glsl */ `
+// for plates that sit on a flat page colour: no tone curve, so an unlit sweep equals the page exactly
+vec4 finishA(vec4 c, vec2 frag){
+  vec3 col = c.rgb;
+  col = col / (1. + max(col - .85, 0.) * .9);       // soften only the hot highlights
+  col = pow(clamp(col, 0., 1.), vec3(1. / 2.2));
+  col += (hash12(frag + fract(uT * 7.13) * 911.) - .5) * .012 * c.a;
+  return vec4(col, c.a);
+}
 vec3 finish(vec3 col, vec2 frag){
   vec2 q = frag / uRes;
   col *= .55 + .45 * pow(16. * q.x * q.y * (1. - q.x) * (1. - q.y), .18);
@@ -89,7 +136,9 @@ vec3 finish(vec3 col, vec2 frag){
 }
 `;
 
-export function shaderPlate({ canvas, w, h, dpr, frag, vec = [0, 0, 0, 0], texture = null }) {
+export const hex3 = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+
+export function shaderPlate({ canvas, w, h, dpr, frag, vec = [0, 0, 0, 0], texture = null, page = "#F4845F" }) {
   canvas.width = Math.round(w * dpr);
   canvas.height = Math.round(h * dpr);
   const gl = canvas.getContext("webgl2", { preserveDrawingBuffer: true, antialias: false, premultipliedAlpha: false });
@@ -120,6 +169,7 @@ export function shaderPlate({ canvas, w, h, dpr, frag, vec = [0, 0, 0, 0], textu
   const U = (n) => gl.getUniformLocation(prog, n);
   gl.uniform2f(U("uRes"), canvas.width, canvas.height);
   gl.uniform4f(U("uData"), ...vec);
+  gl.uniform3f(U("uPage"), ...hex3(page));
   if (texture) {
     const tex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, tex);
@@ -132,8 +182,12 @@ export function shaderPlate({ canvas, w, h, dpr, frag, vec = [0, 0, 0, 0], textu
     gl.uniform1i(U("uTex"), 0);
   }
   const uT = U("uT");
+  const uPage = U("uPage");
   return {
+    setPage(hex) { gl.uniform3f(uPage, ...hex3(hex)); },
     frame(t) {
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
       gl.uniform1f(uT, t);
       // draw in strips so a heavy shader never trips the GPU watchdog
       gl.enable(gl.SCISSOR_TEST);

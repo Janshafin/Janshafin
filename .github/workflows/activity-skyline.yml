@@ -6,6 +6,8 @@ on:
     paths:
       - "studio/scenes/activity.js"
       - "studio/scenes/gl.js"
+      - "studio/stage.html"
+      - "studio/tokens.css"
       - "studio/render.mjs"
       - ".github/workflows/activity-skyline.yml"
   schedule:

@@ -1,131 +1,119 @@
-// Custodian: five gimbal rings, one per agent. They tumble on their own axes and only come into
-// one plane when the policy agrees; then, and only then, light passes through the centre.
-import { shaderPlate } from "./gl.js";
-import { W, H, panelHTML } from "./panel.js";
-
-const P = {
-  name: "Custodian", event: "DoraHacks Agent Economy, 2026", scrim: "rgba(12,9,8,.82)",
-  blurb: "A treasury run by five agents. Language models propose; a fail-closed rules engine of caps, allowlists, cooldowns and velocity limits decides. Only the execution agent holds keys, and every step lands in a signed ledger.",
-  facts: [
-    ["Guarantee", "Nothing executes unless the policy gate approved it first."],
-    ["Built with", "TypeScript, KeeperHub, json-rules-engine, Sepolia"],
-    ["Status", "Policy gate and audit ledger live, 19 tests"],
-  ],
-};
+// DROP 03 Custodian: a toy vault door with five combination dials, one per agent. They spin and
+// click into line one at a time; only when all five agree does the wheel turn and the door open.
+import { dropPlate } from "./drop.js";
 
 const FRAG = /* glsl */ `
-const vec3 C = vec3(2.45, 1.15, 0.);
-const vec3 KEY = normalize(vec3(-.5, .8, .45));
-const vec3 EMB = vec3(1., .55, .25);
-const float FIRE = .93;   // the moment of agreement
-
-float spin(){ return ease((uT - .06) / .74); }
-float beamK(){ float d = abs(fract(uT - FIRE + .5) - .5); return exp(-d * d / .0035); }
-
-float ringD(vec3 p, float R){
-  vec2 q = vec2(length(p.xz) - R, p.y);
-  return length(max(abs(q) - vec2(.045, .1) + .03, 0.)) - .03;
-}
-vec3 ringLocal(vec3 p, int i){
-  vec3 q = p - C;
-  q.yz *= rot(.62); q.xy *= rot(-.18);
+const vec3 DC = vec3(0., 1.15, .3);     // door centre when closed
+const float DR = .86;
+float dialA(int i){
   float fi = float(i);
-  float a = TAU * (fi < 2. ? fi + 1. : (fi == 2. ? -1. : fi - 1.)) * spin();
-  if(i % 2 == 0) q.yz *= rot(a); else q.xy *= rot(a);
-  return q;
+  float T = .1 + fi * .065;
+  float k = (2. + mod(fi, 2.)) * (mod(fi, 2.) == 0. ? 1. : -1.);
+  return (1. - ease(uT / T)) * k * TAU;
 }
-float radius(int i){ return 2.05 - float(i) * .34; }
+float handleA(){ return .5 * PI * (ease((uT - .42) / .07) - ease((uT - .9) / .07)); }
+float doorA(){ return 1.15 * (ease((uT - .5) / .14) - ease((uT - .78) / .12)); }
+vec3 doorLocal(vec3 p){
+  vec3 q = p - vec3(-DR, DC.y, DC.z);   // the hinge
+  q.xz *= rot(-doorA());
+  return q - vec3(DR, 0., 0.);
+}
+vec2 dialPos(int i){ float a = PI * (.84 - .17 * float(i)); return vec2(cos(a), sin(a)) * .56; }
 
 vec2 map(vec3 p){
-  vec2 r = vec2(1e9, -1.);
-  for(int i = 0; i < 5; i++) r = opU(r, vec2(ringD(ringLocal(p, i), radius(i)), 10. + float(i)));
-  // the treasury itself: a small dark sphere at the centre
-  r = opU(r, vec2(length(p - C) - .2, 5.));
-  r = opU(r, vec2(p.y + 1.35, 2.));
+  // the frame: a squat safe body with a round opening, a little dark room inside
+  vec3 f = p - vec3(0., 1.15, 0.);
+  float body = sdRBox(f, vec3(1.18, 1.15, .32), .14);
+  float hole = sdCyl((f - vec3(0., 0., .2)).xzy, DR + .02, .34);
+  vec2 r = vec2(max(body, -hole), 1.);
+  // gold inside
+  for(int i = 0; i < 3; i++){
+    float fi = float(i);
+    // a stack of coins, each one nudged a little off the one below
+    vec3 g = p - vec3(-.36 + fi * .36, .4, -.02);
+    float n = 4. + fi * 3.;
+    float c = clamp(floor(g.y / .07 + .5), 0., n - 1.);
+    for(int k = -1; k <= 1; k++){
+      float ck = clamp(c + float(k), 0., n - 1.);
+      vec3 gc = g - vec3(.018 * sin(ck * 2.7 + fi), ck * .07, .018 * cos(ck * 1.9));
+      r = opU(r, vec2(sdCyl(gc, .14, .028) - .004, 5.));
+    }
+  }
+  // the door
+  vec3 q = doorLocal(p);
+  float door = sdCyl(q.xzy, DR - .02, .07);
+  door = min(door, sdTorus(q.xzy - vec3(0., .07, 0.), vec2(DR - .1, .035)));
+  r = opU(r, vec2(door, 2.));
+  for(int i = 0; i < 5; i++){
+    vec3 d = q - vec3(dialPos(i), .11);
+    r = opU(r, vec2(sdCyl(d.xzy, .1, .04) - .01, 10. + float(i)));
+  }
+  vec3 hq = q - vec3(0., 0., .14);
+  hq.xy *= rot(handleA());
+  float hub = sdCyl(hq.xzy, .09, .07);
+  for(int k = 0; k < 3; k++){
+    vec3 s = hq; s.xy *= rot(float(k) * TAU / 3.);
+    hub = min(hub, sdCapsule(s, vec3(0.), vec3(0., .34, .06), .028));
+    hub = min(hub, length(s - vec3(0., .34, .06)) - .055);
+  }
+  r = opU(r, vec2(hub, 4.));
+  r = opU(r, vec2(p.y, 6.));
   return r;
 }
 @POST
 
-vec3 env(vec3 rd){
-  vec3 c = mix(vec3(.02, .014, .012), vec3(.07, .05, .045), smoothstep(-.2, .7, rd.y));
-  c += vec3(2.4, 2.1, 1.8) * smoothstep(.1, 0., abs(rd.x + .1) - .45) * smoothstep(.7, .86, rd.y);
-  c += vec3(2.2, 1.2, .55) * smoothstep(.06, 0., abs(rd.x - .85) - .04) * smoothstep(0., .3, .55 - abs(rd.y - .1));
-  c += vec3(.8, .85, 1.1) * smoothstep(.06, 0., abs(rd.x + .9) - .05) * smoothstep(0., .3, .5 - abs(rd.y - .2));
-  c += vec3(.6, .35, .2) * .22 * exp(-abs(rd.y) * 8.);
-  return c;
-}
-
-vec3 floorCol(vec3 p){
-  float sh = softShadow(p + vec3(0, .01, 0), KEY, 9.);
-  float ao = calcAO(p, vec3(0, 1, 0));
-  vec3 c = vec3(.04, .03, .026) * (.3 + .7 * sh) * ao;
-  float b = beamK();
-  c += EMB * 1.6 * b * exp(-length(p.xz - C.xz) * 1.6);
-  c += vec3(.12, .08, .06) * exp(-length(p.xz - C.xz) * .4) * sh;
-  return c;
-}
-
-vec3 metal(vec3 p, vec3 n, vec3 rd, float id){
-  int i = int(id - 10.);
-  vec3 q = ringLocal(p, i);
-  float ao = calcAO(p, n);
-  // brushed: streaks follow the ring, so the normal gets a little circumferential noise
-  float ang = atan(q.z, q.x);
-  float br = noise(vec3(ang * 90., q.y * 40., float(i) * 7.));
-  vec3 nb = normalize(n + (br - .5) * .08 * normalize(vec3(-q.z, 0, q.x)));
-  vec3 ref = reflect(rd, nb);
-  float fre = pow(1. - max(dot(nb, -rd), 0.), 5.);
-  vec3 tint = i == 2 ? vec3(1., .78, .52) : vec3(.92, .9, .88);
-  vec3 c = env(ref) * tint * (.65 + .35 * fre) * (.35 + .65 * ao);
-  c += tint * max(dot(nb, KEY), 0.) * .12 * softShadow(p + n * .01, KEY, 10.);
-  // the inner face of each ring lights when they agree
-  float inner = smoothstep(.0, -.04, length(q.xz) - radius(i)) * smoothstep(.06, .0, abs(q.y));
-  c += EMB * inner * (beamK() * 6. + .15);
-  return c;
-}
-
-vec3 render(vec3 ro, vec3 rd){
-  vec2 h = march(ro, rd, 40.);
-  vec3 col;
-  if(h.y < 0.) col = env(rd) * .3;
-  else {
-    vec3 p = ro + rd * h.x;
-    vec3 n = calcNormal(p);
-    if(h.y >= 10.) col = metal(p, n, rd, h.y);
-    else if(h.y == 5.) col = env(reflect(rd, n)) * .5 * vec3(.5, .45, .4) + EMB * beamK() * 3.;
-    else {
-      col = floorCol(p);
-      vec3 rr = reflect(rd, n);
-      vec2 hr = march(p + n * .01, rr, 10.);
-      if(hr.y >= 10.){ vec3 q = p + rr * hr.x; col += metal(q, calcNormal(q), rr, hr.y) * .14; }
-    }
-    col = mix(col, vec3(.03, .02, .018), 1. - exp(-max(h.x - 9., 0.) * .12));
+vec3 surface(vec3 p, vec3 n, vec3 rd, float id){
+  if(id == 1.){
+    // inside the opening it is dark; outside, cream vinyl
+    vec3 f = p - vec3(0., 1.15, 0.);
+    float inside = step(length(f.xy), DR + .05) * step(f.z, .3);
+    return mix(vinyl(p, n, rd, vec3(.82, .8, .74), .9), vinyl(p, n, rd, vec3(.01), .4), inside);
   }
-  // the beam: a column of light through the centre, perpendicular to the agreed plane
-  vec3 ax = vec3(0, 1, 0); ax.yz *= rot(-.62); ax.xy *= rot(.18);
-  vec3 w = ro - C;
-  vec3 c1 = cross(rd, ax);
-  float dl = abs(dot(w, c1)) / max(length(c1), 1e-4);
-  float b = beamK();
-  float along = dot(ro + rd * dot(C - ro, rd) - C, ax);
-  col += EMB * b * (exp(-dl * 40.) * 1.6 + exp(-dl * 6.) * .25) * smoothstep(3.2, .4, abs(along));
-  return col;
+  if(id == 2.) return chromeIn(p, n, rd, vec3(.92, .93, .96));
+  if(id == 4.) return chromeIn(p, n, rd, vec3(.95));
+  if(id == 5.) return chromeIn(p, n, rd, vec3(1., .74, .36));
+  // a dial: ink, with a white tick that ends up pointing straight up
+  int i = int(id - 10.);
+  vec3 q = doorLocal(p) - vec3(dialPos(i), .11);
+  q.xy *= rot(-dialA(i));
+  float tick = step(abs(q.x), .014) * step(.03, q.y) * step(q.y, .095) * step(.0, n.z - .5);
+  return mix(vinyl(p, n, rd, vec3(.008), 1.), vec3(.95), tick);
+}
+
+vec4 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 30.);
+  if(h.y < 0.) return vec4(0);
+  vec3 p = ro + rd * h.x;
+  if(h.y == 6.) return vec4(pageLin() * .3, floorShade(p) * .85);
+  return vec4(surface(p, calcNormal(p), rd, h.y), 1.);
 }
 
 void main(){
-  vec3 ro = vec3(0., 2.2, 9.8), ta = vec3(.6, .75, 0.);
-  vec3 col = vec3(0);
+  vec3 ro = vec3(2.4, 2.4, 7.), ta = vec3(0., 1.05, 0.);
+  vec2 C = vec2(.6, .4) * uRes;
+  vec4 col = vec4(0);
   for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
     vec2 o = vec2(i, j) / 2. - .25;
-    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
-    col += render(ro, camRay(ro, ta, uv, 1.85));
+    vec4 c = render(ro, camRay(ro, ta, (gl_FragCoord.xy + o - C) / uRes.y, 1.85));
+    col += vec4(c.rgb * c.a, c.a);
   }
-  outColor = vec4(finish(col / 4., gl_FragCoord.xy), 1.);
+  col /= 4.;
+  if(col.a > 0.) col.rgb /= col.a;
+  outColor = finishA(col, gl_FragCoord.xy);
 }
 `;
 
-export default {
-  w: W, h: H, frames: 120, fps: 24,
-  html: panelHTML(P),
-  async setup(ctx) { return shaderPlate({ ...ctx, frag: FRAG }); },
-};
+export default dropPlate({
+  name: "Custodian", short: "Custodian", drop: "03/06", repo: "Custodian", page: "#E882B4", fit: "me-pink",
+  figX: 440, tagX: 956, frames: 120,
+  lead: "A treasury run by five agents.",
+  copy: "Language models propose. A fail-closed rules engine of caps, allowlists, cooldowns and velocity limits decides. Only the execution agent holds keys.",
+  spray: { text: "No gate,<br>no go", x: 52, y: 268, size: 58, r: -7 },
+  tag: [
+    ["Minted", "DoraHacks Agent Economy 2026"],
+    ["Materials", "TypeScript, KeeperHub, json-rules-engine, Sepolia"],
+    ["Care", "Nothing executes unless the policy gate approved it first."],
+    ["Status", "Policy gate and audit ledger live, 19 tests"],
+  ],
+  frag: FRAG,
+});

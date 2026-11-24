@@ -13,7 +13,8 @@ import sharp from "sharp";
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const OUT = resolve(process.env.OUT || resolve(ROOT, "../assets"));
-const ALL = ["hero", "flasharb", "trustline", "custodian", "bluecarbon", "activity", "closing"];
+const ALL = ["hero", "flasharb", "trustline", "custodian", "bluecarbon", "capsule", "activity", "closing"];
+const REPOS = ["flasharb", "TrustLine", "Custodian", "Blue-Carbon-MRV", "ADGENT", "gigforce"];
 const STILLS = new Set(["closing"]);
 const DPR = Number(process.env.DPR || 1.5);
 
@@ -25,7 +26,7 @@ const names = args.filter((a) => !a.startsWith("--"));
 const scenes = names.length ? names : ALL;
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css",
-  ".woff2": "font/woff2", ".json": "application/json", ".svg": "image/svg+xml" };
+  ".woff2": "font/woff2", ".woff": "font/woff", ".webp": "image/webp", ".png": "image/png", ".json": "application/json", ".svg": "image/svg+xml" };
 const server = createServer(async (req, res) => {
   const path = join(ROOT, decodeURIComponent(new URL(req.url, "http://x").pathname));
   if (!path.startsWith(ROOT) || !existsSync(path)) { res.writeHead(404).end(); return; }
@@ -57,6 +58,19 @@ async function contributions() {
 
 await mkdir(join(ROOT, "data"), { recursive: true });
 try {
+  // the latest real commit of each featured repo, printed as the barcode on its hangtag
+  if (scenes.some((s) => s !== "activity")) {
+    const repos = {};
+    for (const r of REPOS) {
+      try {
+        const res = await fetch(`https://api.github.com/repos/Janshafin/${r}/commits?per_page=1`,
+          { headers: { "user-agent": "profile-studio/1.0", accept: "application/vnd.github+json" } });
+        const [c] = await res.json();
+        repos[r] = { sha: c.sha, date: c.commit.committer.date };
+      } catch { /* keep going without a barcode */ }
+    }
+    await writeFile(join(ROOT, "data/repos.json"), JSON.stringify(repos));
+  }
   if (scenes.includes("activity")) {
     await writeFile(join(ROOT, "data/contributions.json"), JSON.stringify(await contributions()));
   }

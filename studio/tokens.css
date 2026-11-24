@@ -1,33 +1,49 @@
-/* Dusk palette: the scenes are lit like a low sun over still water.
-   Type: Newsreader for display, Geist for reading. No caps labels, no chips. */
-@font-face { font-family: "Geist"; font-weight: 100 900; font-display: block;
-  src: url("/node_modules/@fontsource-variable/geist/files/geist-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Newsreader"; font-weight: 200 800; font-display: block;
-  src: url("/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-normal.woff2") format("woff2"); }
-@font-face { font-family: "Newsreader"; font-style: italic; font-weight: 200 800; font-display: block;
-  src: url("/node_modules/@fontsource-variable/newsreader/files/newsreader-latin-wght-italic.woff2") format("woff2"); }
+/* THE DROP: the portfolio's own voice. Archivo wide and heavy in ink, on one flat colourway per page.
+   Rubik Spray Paint appears once per plate, for the sprayed tag only. */
+@font-face { font-family: "Archivo"; font-weight: 100 900; font-stretch: 62% 125%; font-display: block;
+  src: url("/node_modules/@fontsource-variable/archivo/files/archivo-latin-standard-normal.woff2") format("woff2"); }
+@font-face { font-family: "Spray"; font-display: block;
+  src: url("/node_modules/@fontsource/rubik-spray-paint/files/rubik-spray-paint-latin-400-normal.woff2") format("woff2"); }
 
 :root {
-  --pearl: #F1ECF6;   /* text */
-  --haze: #B9B0CC;    /* secondary text */
-  --dusk: #7D7496;    /* tertiary */
-  --ember: #FFB089;   /* the moment a block finalizes */
-  --ether: #9EA4FF;   /* Ethereum's own blue-violet, used sparingly */
-  --ink: #17132B;     /* scene base */
+  --ink: #0B0B0B;
+  --orange: #F4845F;
+  --blue: #6EB5FF;
+  --green: #6BBF7A;
+  --pink: #E882B4;
+  --cream: #EEF0E8;
+  --page: var(--orange);
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { background: transparent; }
-body { -webkit-font-smoothing: antialiased; font-family: "Geist", system-ui, sans-serif; color: var(--pearl);
-  font-feature-settings: "ss01", "tnum"; }
+body { -webkit-font-smoothing: antialiased; font-family: "Archivo", "Helvetica Neue", Arial, sans-serif; color: var(--ink); }
 
-.card { position: relative; overflow: hidden; border-radius: 22px; background: var(--ink); }
-.card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
-  box-shadow: inset 0 0 0 1px rgba(241, 236, 246, .08); }
+.card { position: relative; overflow: hidden; border-radius: 26px; background: var(--page); }
 #gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .ui { position: absolute; inset: 0; }
 
-.display { font-family: "Newsreader", serif; font-weight: 300; letter-spacing: -.035em; line-height: .9;
-  font-variation-settings: "opsz" 72; }
-.lede { font: 400 20px/1.45 "Geist"; letter-spacing: -.012em; color: var(--haze); }
-.small { font: 450 14px/1.5 "Geist"; letter-spacing: -.005em; color: var(--dusk); }
-.pearl { color: var(--pearl); }
+/* type */
+.wide { font-stretch: 125%; font-weight: 900; letter-spacing: -.01em; line-height: .84; text-transform: uppercase; }
+.caps { font-stretch: 112%; font-weight: 750; font-size: 13px; letter-spacing: .02em; text-transform: uppercase; line-height: 1.25; }
+.body { font-stretch: 100%; font-weight: 500; font-size: 17px; line-height: 1.38; letter-spacing: -.005em; }
+.spray { font-family: "Spray", sans-serif; color: #fff; line-height: .9; }
+
+/* pill, as on the portfolio */
+.pill { display: inline-flex; align-items: center; gap: 12px; height: 46px; padding: 0 8px 0 22px; border-radius: 99px;
+  background: rgba(255,255,255,.38); }
+.pill .dot { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center;
+  font: 700 14px/1 "Archivo"; }
+
+/* the hangtag: card stock, punched, on a string */
+.tag { position: absolute; width: 236px; padding: 46px 20px 18px; background: #F7F5EF; border-radius: 6px 6px 10px 10px;
+  box-shadow: 0 18px 30px -12px rgba(0,0,0,.35), 0 2px 0 rgba(0,0,0,.05), inset 0 0 0 1px rgba(0,0,0,.06);
+  transform-origin: 50% 23px; clip-path: polygon(22% 0, 78% 0, 100% 14%, 100% 100%, 0 100%, 0 14%); }
+.tag::before { content: ""; position: absolute; left: 50%; top: 16px; width: 14px; height: 14px; margin-left: -7px;
+  border-radius: 50%; background: var(--page); box-shadow: inset 0 1px 2px rgba(0,0,0,.35); }
+.tag .row { display: grid; grid-template-columns: 78px 1fr; gap: 8px; padding: 7px 0; border-top: 1.5px solid var(--ink);
+  font-stretch: 100%; font-size: 11.5px; line-height: 1.3; font-weight: 560; }
+.tag .row b { font-stretch: 115%; font-weight: 800; font-size: 10.5px; text-transform: uppercase; letter-spacing: .02em; }
+.tag .code { display: flex; height: 34px; gap: 1px; margin-top: 10px; align-items: stretch; }
+.tag .code i { display: block; background: var(--ink); }
+.tag .hash { font: 600 9.5px/1 "Archivo"; font-stretch: 100%; letter-spacing: .14em; margin-top: 5px; text-transform: uppercase; }
+.string { position: absolute; width: 1.5px; background: rgba(11,11,11,.7); transform-origin: 50% 0; }

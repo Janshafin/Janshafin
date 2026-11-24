@@ -1,101 +1,92 @@
-// flasharb: two pools of liquid metal joined at the waist. A droplet of borrowed value runs a
-// figure-eight through both and comes home; the pools trade volume but the sum never changes.
-import { shaderPlate } from "./gl.js";
-import { W, H, panelHTML } from "./panel.js";
-
-const P = {
-  name: "flasharb", event: "ETHGlobal Mumbai, 2026", scrim: "rgba(6,8,18,.8)",
-  blurb: "Flash arbitrage between Uniswap v4 and 1inch Aqua. It borrows through v4 flash accounting, trades against an Aqua strategy and keeps the spread, all inside one unlock.",
-  facts: [
-    ["Guarantee", "Every borrowed token is repaid in the same transaction, or the whole trade reverts."],
-    ["Built with", "Solidity, Huff, Uniswap v4, 1inch Aqua, Foundry"],
-    ["Status", "Runs end to end on a local chain"],
-  ],
-};
+// DROP 01 flasharb: a Cuban-link chain lying on the sweep. An ETH pendant runs the whole chain
+// once per loop and comes home: borrowed, traded, repaid, inside one unlock.
+import { dropPlate } from "./drop.js";
 
 const FRAG = /* glsl */ `
-const vec3 C = vec3(2.35, 1.05, 0.);
-vec3 dropPos(float s){ return vec3(2.25 * sin(s), 1.25 * sin(s) * cos(s), .95 * cos(s)); }
+const float N = 22., R = 1.32;
+const float LE = .115, R1 = .13, R2 = .056;
+float sdLink(vec3 p, float le, float r1, float r2){
+  vec3 q = vec3(p.x, max(abs(p.y) - le, 0.), p.z);
+  return length(vec2(length(q.xy) - r1, q.z)) - r2;
+}
+vec3 frameP(vec3 p){
+  p.y -= .2;
+  p.yz *= rot(-.12);
+  p.xz *= rot(TAU * uT / N * 2.);   // two links per loop: the chain looks identical at t = 1
+  return p;
+}
+float pendT(){ return TAU * uT; }
+vec3 pendantPos(){ float a = pendT() + 1.2; return vec3(R * cos(a), .28, R * sin(a)); }
 
 vec2 map(vec3 p){
-  float s = TAU * uT;
-  vec3 q = p - C;
-  q.xz *= rot(-.35);
-  float k = .09 * sin(s);
-  float a = length(q - vec3(-.98, 0, 0)) - (.82 + k);
-  float b = length(q - vec3( .98, 0, 0)) - (.82 - k);
-  float d = smin(a, b, .85);
-  // the droplet, and a second one half a loop behind
-  d = smin(d, length(q - dropPos(s)) - .16, .5);
-  d = smin(d, length(q - dropPos(s + PI)) - .1, .4);
-  // a fine standing ripple on the metal
-  d += .004 * sin(14. * q.x + 3. * s) * sin(12. * q.y - 2. * s) * sin(11. * q.z + s);
+  vec3 q0 = frameP(p);
+  float a = atan(q0.z, q0.x), st = TAU / N;
+  float d = 1e9;
+  float i0 = floor(a / st + .5);
+  for(int k = -1; k <= 1; k++){
+    float i = i0 + float(k);
+    vec3 q = q0; q.xz *= rot(-i * st);
+    q.x -= R;
+    vec3 l = mod(i, 2.) == 0. ? vec3(q.x, q.z, q.y) : vec3(q.y, q.z, q.x);
+    l.xz *= rot(mod(i, 2.) == 0. ? .5 : -.5);      // a Cuban link is twisted flat
+    d = min(d, sdLink(l, LE, R1, R2));
+  }
   vec2 r = vec2(d * .9, 1.);
-  r = opU(r, vec2(p.y + .25, 2.));
+  // the pendant: a chunky ETH diamond riding the chain
+  vec3 pp = q0 - pendantPos();
+  float pa = pendT() * 2.;
+  pp.xz *= rot(pa);
+  pp.y -= .12;
+  vec3 a3 = abs(pp);
+  // the Ethereum mark: a tall upper pyramid over a short lower one, split by a hairline
+  float upper = max((a3.x + a3.z) - (.26 - (pp.y - .03) * .5), .03 - pp.y);
+  float lower = max((a3.x + a3.z) - (.26 + (pp.y + .03) * 1.1), pp.y + .03);
+  float dia = min(upper, lower) * .6 - .008;
+  r = opU(r, vec2(dia, 3.));
+  r = opU(r, vec2(p.y, 2.));
   return r;
 }
 @POST
 
-// a dark photo studio: one overhead softbox, a cool strip, a warm kicker
-vec3 env(vec3 rd){
-  vec3 c = mix(vec3(.012, .014, .03), vec3(.05, .055, .1), smoothstep(-.3, .6, rd.y));
-  c += vec3(2.6, 2.5, 2.7) * smoothstep(.08, .0, abs(rd.x + .05) - .55) * smoothstep(.72, .86, rd.y);
-  c += vec3(1.2, 1.4, 2.) * smoothstep(.06, .0, abs(rd.x + .86) - .06) * smoothstep(.0, .2, .55 - abs(rd.y - .15));
-  c += vec3(2.4, 1.1, .5) * smoothstep(.07, .0, abs(rd.x - .78) - .05) * smoothstep(.0, .25, .5 - abs(rd.y - .05)) * step(rd.z, .2);
-  c += vec3(.5, .4, .7) * .25 * exp(-abs(rd.y) * 9.);
-  return c;
-}
-
-vec3 floorCol(vec3 p, vec3 rd){
-  float sh = softShadow(p + vec3(0, .01, 0), normalize(vec3(-.1, 1., .15)), 6.);
-  float ao = calcAO(p, vec3(0, 1, 0));
-  vec3 c = vec3(.035, .038, .07) * (.25 + .75 * sh) * ao;
-  float r = length(p.xz - C.xz);
-  c += vec3(.12, .1, .2) * exp(-r * .35) * sh;
-  return c;
-}
-
-vec3 metal(vec3 p, vec3 n, vec3 rd){
-  vec3 ref = reflect(rd, n);
-  vec2 h = march(p + n * .02, ref, 20.);
-  vec3 rc;
-  if(h.y == 1.) rc = env(reflect(ref, calcNormal(p + ref * h.x))) * vec3(.85, .87, .92);
-  else if(h.y == 2.) rc = floorCol(p + ref * h.x, ref);
-  else rc = env(ref);
-  float fre = .78 + .22 * pow(1. - max(dot(n, -rd), 0.), 5.);
-  float ao = calcAO(p, n);
-  return rc * vec3(.9, .92, .96) * fre * (.4 + .6 * ao);
-}
-
-vec3 render(vec3 ro, vec3 rd){
-  vec2 h = march(ro, rd, 40.);
-  if(h.y < 0.) return env(rd) * .35;
+vec4 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 30.);
+  if(h.y < 0.) return vec4(0);
   vec3 p = ro + rd * h.x;
-  vec3 n = calcNormal(p);
-  vec3 col = h.y == 1. ? metal(p, n, rd) : floorCol(p, rd);
   if(h.y == 2.){
-    // glossy floor: a soft, dim reflection of the metal
-    vec3 rr = reflect(rd, vec3(0, 1, 0));
-    vec2 hr = march(p + vec3(0, .01, 0), rr, 20.);
-    if(hr.y == 1.){ vec3 q = p + rr * hr.x; col += metal(q, calcNormal(q), rr) * .22 * exp(-hr.x * .9); }
+    float s = floorShade(p);
+    return vec4(pageLin() * .32, s * .85);
   }
-  return mix(col, vec3(.02, .022, .045), 1. - exp(-max(h.x - 8., 0.) * .12));
+  vec3 n = calcNormal(p);
+  if(h.y == 1.) return vec4(chromeIn(p, n, rd, vec3(1., .74, .36)), 1.);   // gold
+  return vec4(vinyl(p, n, rd, vec3(.012), 1.), 1.);       // gloss-black vinyl pendant
 }
 
 void main(){
-  vec3 ro = vec3(0., 1.75, 9.4), ta = vec3(.55, .65, 0.);
-  vec3 col = vec3(0);
+  vec3 ro = vec3(0., 6.1, 10.4), ta = vec3(0., .1, 0.);
+  vec2 C = vec2(.618, .33) * uRes;   // where the toy sits on the plate
+  vec4 col = vec4(0);
   for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
     vec2 o = vec2(i, j) / 2. - .25;
-    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
-    col += render(ro, camRay(ro, ta, uv, 1.9));
+    vec2 uv = (gl_FragCoord.xy + o - C) / uRes.y;
+    col += render(ro, camRay(ro, ta, uv, 2.1));
   }
-  outColor = vec4(finish(col / 4., gl_FragCoord.xy), 1.);
+  col /= 4.;
+  if(col.a > 0.) col.rgb /= col.a;
+  outColor = finishA(col, gl_FragCoord.xy);
 }
 `;
 
-export default {
-  w: W, h: H, frames: 96, fps: 24,
-  html: panelHTML(P),
-  async setup(ctx) { return shaderPlate({ ...ctx, frag: FRAG }); },
-};
+export default dropPlate({
+  name: "Flasharb", short: "flasharb", drop: "01/06", repo: "flasharb", page: "#F4845F", fit: "me-orange",
+  figX: 470, tagX: 956, frames: 96,
+  lead: "Atomic flash arbitrage between Uniswap v4 and 1inch Aqua.",
+  copy: "Borrow through v4 flash accounting, trade against an Aqua strategy, keep the spread. All inside one unlock.",
+  spray: { text: "Repay<br>or revert", x: 52, y: 268, size: 58, r: -7 },
+  tag: [
+    ["Minted", "ETHGlobal Mumbai 2026"],
+    ["Materials", "Solidity, Huff, Uniswap v4, 1inch Aqua, Foundry"],
+    ["Care", "Repay in the same transaction or the whole trade reverts."],
+    ["Status", "Runs end to end on a local chain"],
+  ],
+  frag: FRAG,
+});

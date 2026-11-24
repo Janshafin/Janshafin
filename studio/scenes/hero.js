@@ -1,162 +1,123 @@
-// Hero: a chain as architecture. Ceramic blocks stack into a slow twisting tower that sinks
-// into still water at dusk; each loop a new block drops onto the top and its seam lights as it finalizes.
-import { shaderPlate } from "./gl.js";
+// Hero, CHANGE THE FIT: the portfolio's opening, made for GitHub. Four fits, four colourways,
+// a hard colour wipe between them, and a gloss-black ETH bag charm swinging on a ball chain.
+import { shaderPlate, TAU } from "./gl.js";
 
-export const FRAG = /* glsl */ `
-const float H = .34;      // block pitch
-const float TW = .31;     // twist per block
-const float TOP = 9.;     // the incoming block; the resting stack is every level below it
-const float LAND = .46;   // when it lands
-const vec3 TOWER = vec3(2.05, 0., -.4);
-const vec3 SUN = normalize(vec3(-.7, .3, .32));     // key: low, from the left
-const vec3 GLOW = normalize(vec3(.5, .07, -.86));   // where the sun has just set
+const W = 1200, H = 720;
+const FITS = [
+  { page: "#F4845F", fig: "me-orange", name: "Stay focused" },
+  { page: "#6EB5FF", fig: "me-blue", name: "Focus" },
+  { page: "#6BBF7A", fig: "me-green", name: "Yeo!" },
+  { page: "#E882B4", fig: "me-pink", name: "Soft launch" },
+];
 
-float fallOffset(float s){
-  float x = clamp(s / LAND, 0., 1.);
-  float d = 5.2 * (1. - x) * (1. - x);
-  // a small settle after contact
-  float a = max(s - LAND, 0.);
-  return d + .035 * sin(a * 40.) * exp(-a * 18.);
-}
-float levelY(float i, float s){ return (i - s) * H + (i == TOP ? fallOffset(s) : 0.); }
-float levelR(float i, float s){
-  float spin = i == TOP ? 1.4 * pow(1. - clamp(s / LAND, 0., 1.), 2.) : 0.;
-  return (i - s) * TW + spin;
-}
-vec3 local(vec3 p, float i){
-  float s = uT;
-  vec3 q = p - TOWER;
-  q.y -= levelY(i, s);
-  q.xz *= rot(levelR(i, s));
-  return q;
-}
-float slab(vec3 q){ return sdRBox(q, vec3(1.08, .135, .66), .028); }
+const FRAG = /* glsl */ `
+const vec3 PIV = vec3(0., 3.4, 0.);
+const float LEN = 2.;
+float swing(){ return .16 * sin(TAU * uT * 2.) + .05 * sin(TAU * uT * 4. + 1.); }
+vec3 down(){ float a = swing(); return normalize(vec3(sin(a), -cos(a), .25 * sin(a * 2.))); }
 
 vec2 map(vec3 p){
-  float s = uT;
-  vec3 q0 = p - TOWER;
-  float c0 = floor(q0.y / H + s + .5);
-  float d = 1e9, id = -1.;
-  for(int k = -1; k <= 1; k++){
-    float i = min(c0 + float(k), TOP - 1.);
-    if(i < -2.) continue;
-    float e = slab(local(p, i));
-    if(e < d){ d = e; id = 20. + i; }
+  vec3 dir = down();
+  vec3 end = PIV + dir * LEN;
+  // ball chain: beads strung along the line
+  vec3 q = p - PIV;
+  float along = clamp(dot(q, dir), 0., LEN);
+  float k = floor(along / .085 + .5) * .085;
+  float bead = 1e9;
+  for(int j = -1; j <= 1; j++){
+    float s = clamp(k + float(j) * .085, 0., LEN);
+    bead = min(bead, length(q - dir * s) - .032);
   }
-  float f = slab(local(p, TOP));
-  if(f < d){ d = f; id = 20. + TOP; }
-  vec2 r = vec2(d, id);
-  // distant chains in the haze
-  r = opU(r, vec2(p.y, 2.));
+  vec2 r = vec2(bead, 1.);
+  // jump ring
+  vec3 jr = p - end - dir * .06;
+  r = opU(r, vec2(sdTorus(jr.xzy, vec2(.08, .022)), 1.));
+  // the charm: the Ethereum mark, chunky vinyl, turning slowly on the chain
+  vec3 c = p - end - dir * .5;
+  c.xz *= rot(TAU * uT + .4);
+  vec3 a = abs(c);
+  float upper = max((a.x + a.z) - (.3 - (c.y - .03) * .5), .03 - c.y);
+  float lower = max((a.x + a.z) - (.3 + (c.y + .03) * 1.12), c.y + .03);
+  float eth = min(upper, lower) * .6 - .02;
+  r = opU(r, vec2(eth, 3.));
   return r;
 }
 @POST
 
-vec3 sky(vec3 rd){
-  float y = rd.y;
-  vec3 top = vec3(.025, .022, .07), mid = vec3(.14, .1, .26), hor = vec3(.8, .42, .34);
-  vec3 c = mix(hor, mid, smoothstep(-.02, .22, y));
-  c = mix(c, top, smoothstep(.16, .75, y));
-  float sd = max(dot(rd, GLOW), 0.);
-  c += vec3(1., .42, .22) * pow(sd, 10.) * .38 + vec3(1., .6, .4) * pow(sd, 60.) * .6;
-  // a faint band of high cloud
-  float cl = fbm(vec3(rd.x * 3. / (y + .25), rd.y * 18., 1.3));
-  c += vec3(1., .6, .5) * smoothstep(.55, .8, cl) * .12 * smoothstep(.0, .06, y) * (1. - smoothstep(.1, .3, y));
-  return c;
-}
-
-float glowAge(float i){ return uT + (TOP - i) - LAND; }
-
-vec3 shadeSolid(vec3 p, vec3 n, vec3 rd, float id){
-  float ao = calcAO(p, n);
-  vec3 ref = reflect(rd, n);
-  float fre = pow(1. - max(dot(n, -rd), 0.), 5.);
-  float sh = softShadow(p + n * .01, SUN, 12.);
-  float dif = max(dot(n, SUN), 0.) * sh;
-  float fill = max(dot(n, normalize(vec3(-.7, .45, .6))), 0.);
-  float up = .5 + .5 * n.y;
-  float down = max(-n.y, 0.);
-  vec3 col;
-  if(id >= 10.){
-    float i = id - 20.;
-    vec3 q = local(p, i);
-    vec3 alb = vec3(.84, .8, .88);
-    float back = max(dot(n, GLOW), 0.);
-    col = alb * (dif * vec3(2.5, 1.5, 1.0) + up * vec3(.16, .13, .3) * ao + back * vec3(.9, .42, .3) * ao
-                 + down * vec3(.3, .15, .14) * ao);
-    col += (.04 + .5 * fre) * sky(ref) * ao * mix(.4, 1., sh);
-    // the seam: a hairline groove around each block, with a hash written along it
-    float side = 1. - abs(n.y);
-    float seam = smoothstep(.016, .006, abs(q.y)) * side;
-    float cell = floor(q.x * 22.) + floor(q.z * 22.) * 7. + i * 31.;
-    float bits = step(.45, hash12(vec2(cell, i))) * smoothstep(.05, .02, abs(q.y + .055)) * side;
-    float age = glowAge(i);
-    float hot = age >= 0. ? exp(-age * 2.4) : 0.;
-    vec3 ember = vec3(1., .5, .26);
-    col *= 1. - seam * .55;
-    col += seam * (ember * 5. * hot + vec3(.45, .48, 1.) * .5);
-    col = mix(col, col * .55 + ember * 3. * hot, bits * .35);
-  } else if(id == 3.){
-    col = vec3(.12, .09, .2) + vec3(.5, .3, .25) * max(dot(n, SUN), 0.) * .4;
-  } else {
-    col = vec3(.03, .025, .06);
-  }
-  return col;
-}
-
-vec3 fogged(vec3 col, vec3 rd, float t){
-  vec3 fc = mix(vec3(.62, .34, .32), vec3(.16, .11, .27), smoothstep(-.1, .25, rd.y));
-  fc += vec3(1., .5, .3) * pow(max(dot(rd, GLOW), 0.), 8.) * .3;
-  return mix(col, fc, 1. - exp(-t * .024));
-}
-
-vec3 render(vec3 ro, vec3 rd){
-  vec2 h = march(ro, rd, 90.);
-  if(h.y < 0.) return sky(rd);
+vec4 render(vec3 ro, vec3 rd){
+  vec2 h = march(ro, rd, 30.);
+  if(h.y < 0.) return vec4(0);
   vec3 p = ro + rd * h.x;
-  if(h.y == 2.){
-    // still water: rings spread from where the tower meets it
-    vec2 d = p.xz - TOWER.xz;
-    float r = length(d);
-    float w = sin(r * 13. - TAU * uT * 3.) * exp(-r * .45) * .5 + (noise(vec3(p.xz * 3.5, 0.)) - .5) * .25;
-    vec3 n = normalize(vec3(d / max(r, .001) * w * .06, 1.).xzy);
-    vec3 rr = reflect(rd, n);
-    vec2 hr = march(p + n * .01, rr, 60.);
-    vec3 rc = hr.y < 0. ? sky(rr) : fogged(shadeSolid(p + rr * hr.x, calcNormal(p + rr * hr.x), rr, hr.y), rr, hr.x);
-    float fre = .06 + .94 * pow(1. - max(dot(n, -rd), 0.), 5.);
-    float sh = softShadow(p + vec3(0, .01, 0), SUN, 10.);
-    vec3 base = vec3(.035, .028, .07) * (.4 + .6 * sh);
-    vec3 col = mix(base, rc * .85, clamp(fre * 1.35, 0., 1.));
-    return fogged(col, rd, h.x);
-  }
-  return fogged(shadeSolid(p, calcNormal(p), rd, h.y), rd, h.x);
+  vec3 n = calcNormal(p);
+  if(h.y == 1.) return vec4(chromeIn(p, n, rd, vec3(.95, .96, 1.)), 1.);
+  // gloss-black: vinyl body with a black-chrome skin, so the facets catch the studio
+  return vec4(vinyl(p, n, rd, vec3(.008), .9) + chromeIn(p, n, rd, vec3(.3)), 1.);
 }
 
 void main(){
-  vec3 ro = vec3(-.2, 1.15, 8.6), ta = vec3(.7, 1.95, 0.);
-  vec3 col = vec3(0);
+  vec3 ro = vec3(0., .55, 7.4), ta = vec3(0., .55, 0.);
+  vec2 C = vec2(.775, .6) * uRes;
+  vec4 col = vec4(0);
   for(int j = 0; j < 2; j++) for(int i = 0; i < 2; i++){
     vec2 o = vec2(i, j) / 2. - .25;
-    vec2 uv = (gl_FragCoord.xy + o - .5 * uRes) / uRes.y;
-    col += render(ro, camRay(ro, ta, uv, 1.65));
+    col += render(ro, camRay(ro, ta, (gl_FragCoord.xy + o - C) / uRes.y, 2.));
   }
   col /= 4.;
-  outColor = vec4(finish(col, gl_FragCoord.xy), 1.);
+  if(col.a > 0.) col.rgb /= col.a;
+  outColor = finishA(col, gl_FragCoord.xy);
 }
 `;
 
+const ease = (x) => (x <= 0 ? 0 : x >= 1 ? 1 : 1 - Math.pow(1 - x, 3));
+
 export default {
-  w: 1200, h: 640, frames: 120, fps: 24,
+  w: W, h: H, frames: 128, fps: 24, page: FITS[3].page,
+  under: `
+    <div id="base" style="position:absolute;inset:0"></div>
+    <div id="wipe" style="position:absolute;inset:0"></div>
+    <div id="nm" class="wide" style="position:absolute;left:34px;right:34px;top:58px;display:flex;justify-content:space-between;font-size:150px;letter-spacing:.01em;white-space:nowrap">
+      <span style="text-transform:none;font-weight:800">Jan</span><span>Shafin</span></div>
+    ${FITS.map((f, i) => `<img id="f${i}" src="/models/${f.fig}.webp" style="position:absolute;left:50%;bottom:-430px;height:1100px;transform:translateX(-50%);transform-origin:50% 70%;opacity:0">`).join("")}`,
   html: `
-  <div style="position:absolute;inset:0;background:linear-gradient(90deg,rgba(14,11,28,.55) 0%,rgba(14,11,28,.2) 34%,rgba(14,11,28,0) 52%)"></div>
-  <div style="position:absolute;left:64px;bottom:58px;width:560px">
-    <h1 class="display" style="font-size:118px">Jan Shafin</h1>
-    <p class="lede" style="margin-top:26px;max-width:470px;font-size:22px">
-      I build Ethereum systems where autonomous agents can act, and can’t cheat.</p>
-  </div>
-`,
+    <div class="caps" style="position:absolute;left:40px;top:300px;font-size:17px;line-height:1.2">Web3 developer<br><span style="font-weight:600">and creative director.</span></div>
+    <div class="caps" style="position:absolute;left:40px;top:362px;width:260px;font-size:13px;font-weight:600;line-height:1.35">I build Ethereum systems where autonomous agents can act, and can’t cheat.</div>
+    <div class="caps" style="position:absolute;right:40px;top:300px;text-align:right;font-size:17px;line-height:1.2">Culture<br><span style="font-weight:600">plus code.</span></div>
+    <div class="pill caps" style="position:absolute;left:28px;bottom:28px;font-size:13px">Get in touch <span class="dot">@</span></div>
+    <div class="caps" style="position:absolute;left:50%;bottom:30px;transform:translateX(-50%);height:46px;display:flex;align-items:center;gap:12px;
+      padding:0 8px 0 22px;border-radius:99px;background:rgba(255,255,255,.38);font-size:12px">
+      Fit <span id="fitno">01/04</span><span id="fitname" style="background:var(--ink);color:#fff;height:32px;padding:0 16px;border-radius:99px;display:flex;align-items:center;font-size:13px"></span></div>
+    <div class="caps" style="position:absolute;right:40px;bottom:44px;font-size:13px">Chennai, India</div>`,
 
   async setup(ctx) {
-    return shaderPlate({ ...ctx, frag: FRAG });
+    const nmEl = ctx.under.querySelector("#nm");
+    nmEl.style.justifyContent = "flex-start"; nmEl.style.gap = "0.32em";
+    nmEl.style.fontSize = `${150 * (W - 68) / nmEl.scrollWidth}px`;
+    nmEl.style.justifyContent = "space-between"; nmEl.style.gap = "0";
+    const imgs = FITS.map((_, i) => ctx.under.querySelector(`#f${i}`));
+    await Promise.all(imgs.map((im) => im.decode()));
+    const base = ctx.under.querySelector("#base"), wipe = ctx.under.querySelector("#wipe");
+    const no = ctx.ui.querySelector("#fitno"), nm = ctx.ui.querySelector("#fitname");
+    const toy = shaderPlate({ ...ctx, frag: FRAG, page: FITS[0].page });
+    return {
+      frame(t) {
+        const k = Math.floor(t * 4) % 4, u = t * 4 - Math.floor(t * 4);
+        const prev = (k + 3) % 4;
+        const w = ease(u / .22);                       // the wipe, from the figure outward
+        base.style.background = FITS[w >= 1 ? k : prev].page;
+        wipe.style.background = FITS[k].page;
+        wipe.style.clipPath = `circle(${w * 110}% at 50% 62%)`;
+        const showing = u < .07 ? prev : k;
+        imgs.forEach((im, i) => {
+          im.style.opacity = i === showing ? 1 : 0;
+          const pop = i === k ? 1 - .05 * Math.exp(-Math.max(u - .07, 0) * 40) : 1;
+          im.style.transform = `translateX(-50%) scale(${pop.toFixed(3)})`;
+        });
+        ctx.card.style.setProperty("--page", FITS[showing].page);
+        no.textContent = `0${showing + 1}/04`;
+        nm.textContent = FITS[showing].name;
+        toy.setPage(FITS[showing].page);
+        toy.frame(t);
+      },
+    };
   },
 };
